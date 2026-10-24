@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         STRATA Beta
 // @namespace    strata-beta
-// @version      8.5.95
+// @version      8.5.98
 // @description  STRATA beta — a curated electronic music radio for YouTube, playing from independent labels, with release info, track analysis and audio-reactive visuals.
 // @match        https://www.youtube.com/*
 // @grant        GM_getValue
@@ -23,7 +23,20 @@
     'use strict';
 
     const STRATA_VERSION =
-        '8.5.95';
+        '8.5.98';
+
+    /*
+        v8.5.98: the v2 analysis engine is the only engine. The classic
+        engine and the NEW / CLASSIC Settings switch are removed.
+
+        v8.5.97 TRACK ANALYSIS ENGINE v2
+        Kick-band tempo on the media clock with whole-track phase-coherent
+        scoring and BPM snapping; harmonic/percussive separation and
+        between-kick snapshots before key detection; tuning detection;
+        EDM key profiles; provisional key early, full-track result saved
+        and refined on replays; honest "No clear key". Per-track analysis
+        log in About -> Copy diagnostics.
+    */
 
     /*
         v8.5.94 QUIET CONSOLE
@@ -1126,38 +1139,19 @@
     const TRACK_ANALYSIS_SAMPLE_MS =
         40;
 
-    const TRACK_ANALYSIS_KEY_SAMPLE_MS =
-        950;
 
-    const TRACK_ANALYSIS_BPM_REFRESH_MS =
-        6000;
 
-    const TRACK_ANALYSIS_SCALE_REFRESH_MS =
-        4000;
 
-    const TRACK_ANALYSIS_KEY_MIN_SECONDS =
-        6;
 
     const TRACK_ANALYSIS_KEY_MIN_CONFIDENCE =
         0.60;
 
-    const TRACK_ANALYSIS_BPM_MIN_SECONDS =
-        28;
 
     const TRACK_ANALYSIS_BPM_MIN_CONFIDENCE =
         0.60;
 
-    const TRACK_ANALYSIS_SCALE_MIN_SECONDS =
-        36;
 
-    const TRACK_ANALYSIS_SCALE_MIN_CONFIDENCE =
-        0.60;
 
-    const TRACK_ANALYSIS_MAX_ENVELOPE =
-        Math.round(
-            44000 /
-            TRACK_ANALYSIS_SAMPLE_MS
-        );
 
     const TRACK_ANALYSIS_NOTE_NAMES = [
         'C',
@@ -1174,35 +1168,7 @@
         'B'
     ];
 
-    const TRACK_ANALYSIS_MAJOR_PROFILE = [
-        6.35,
-        2.23,
-        3.48,
-        2.33,
-        4.38,
-        4.09,
-        2.52,
-        5.19,
-        2.39,
-        3.66,
-        2.29,
-        2.88
-    ];
 
-    const TRACK_ANALYSIS_MINOR_PROFILE = [
-        6.33,
-        2.68,
-        3.52,
-        5.38,
-        2.60,
-        3.53,
-        2.54,
-        4.75,
-        3.98,
-        2.69,
-        3.34,
-        3.17
-    ];
 
     /*
         Expanded scale/mode family estimates. Major and Minor retain the
@@ -1288,8 +1254,6 @@
     let trackAnalysisTempoMaxBin =
         0;
 
-    let trackAnalysisTempoWeightTotal =
-        0;
 
     let trackAnalysisKeyPitchClasses =
         null;
@@ -1309,31 +1273,13 @@
     let trackAnalysisTrackId =
         null;
 
-    let trackAnalysisStartedAt =
-        0;
 
-    let trackAnalysisLastKeySampleAt =
-        0;
 
-    let trackAnalysisLastBpmRefreshAt =
-        0;
 
-    let trackAnalysisLastScaleRefreshAt =
-        0;
 
-    let trackAnalysisFluxBaseline =
-        0;
 
-    let trackAnalysisEnvelope =
-        [];
 
-    let trackAnalysisChroma =
-        new Float64Array(
-            12
-        );
 
-    let trackAnalysisChromaFrames =
-        0;
 
     let trackAnalysisBpm =
         null;
@@ -1350,8 +1296,6 @@
     let trackAnalysisKeyConfidence =
         0;
 
-    let trackAnalysisScaleConfidence =
-        0;
 
     /*
         PRISM CYCLE skin: the accent hue drifts slowly round the colour
@@ -1848,8 +1792,6 @@
                     1
             );
 
-        trackAnalysisTempoWeightTotal =
-            0;
 
         for (
             let index = 1;
@@ -1891,8 +1833,6 @@
             ] =
                 weight;
 
-            trackAnalysisTempoWeightTotal +=
-                weight;
         }
 
         const keyBinHz =
@@ -2511,8 +2451,6 @@
         trackAnalysisTempoMaxBin =
             0;
 
-        trackAnalysisTempoWeightTotal =
-            0;
 
         trackAnalysisKeyPitchClasses =
             null;
@@ -7300,35 +7238,21 @@
         trackId =
             currentVideoId()
     ) {
+        if ( v2 && v2.trackId && v2.trackId !== ( trackId || null ) ) {
+            v2FlushOnLeave();
+        }
+
         trackAnalysisTrackId =
             trackId ||
             null;
 
-        trackAnalysisStartedAt =
-            performance.now();
 
-        trackAnalysisLastKeySampleAt =
-            0;
 
-        trackAnalysisLastBpmRefreshAt =
-            0;
 
-        trackAnalysisLastScaleRefreshAt =
-            0;
 
-        trackAnalysisFluxBaseline =
-            0;
 
-        trackAnalysisEnvelope =
-            [];
 
-        trackAnalysisChroma =
-            new Float64Array(
-                12
-            );
 
-        trackAnalysisChromaFrames =
-            0;
 
         trackAnalysisBpm =
             null;
@@ -7345,8 +7269,6 @@
         trackAnalysisKeyConfidence =
             0;
 
-        trackAnalysisScaleConfidence =
-            0;
 
         if (
             trackAnalysisPreviousTempoSpectrum
@@ -7361,25 +7283,14 @@
             trackAnalysisTrackId
         );
 
+        v2Reset( trackAnalysisTrackId );
+        if ( v2.restored ) {
+            v2Publish();
+        }
+
         updateTrackAnalysisUI();
     }
 
-    function trackAnalysisElapsedSeconds() {
-        if (
-            !trackAnalysisStartedAt
-        ) {
-            return 0;
-        }
-
-        return Math.max(
-            0,
-            (
-                performance.now() -
-                trackAnalysisStartedAt
-            ) /
-                1000
-        );
-    }
 
     function formatTrackAnalysisConfidence(
         value
@@ -7510,902 +7421,12 @@
             return;
         }
 
-        const bpmValue =
-            document.getElementById(
-                'strata-analysis-bpm'
-            );
-
-        const keyValue =
-            document.getElementById(
-                'strata-analysis-key'
-            );
-
-        const scaleValue =
-            document.getElementById(
-                'strata-analysis-scale'
-            );
-
-        const camelotValue =
-            document.getElementById(
-                'strata-analysis-camelot'
-            );
-
-        const tempoConfidence =
-            document.getElementById(
-                'strata-analysis-tempo-confidence'
-            );
-
-        const keyConfidence =
-            document.getElementById(
-                'strata-analysis-key-confidence'
-            );
-
-        const state =
-            document.getElementById(
-                'strata-analysis-state'
-            );
-
-        const elapsed =
-            trackAnalysisElapsedSeconds();
-
-        const hasAudio =
-            Boolean(
-                trackAnalysisTempoAnalyser &&
-                trackAnalysisKeyAnalyser &&
-                visualizerMode ===
-                    'AUDIO'
-            );
-
-        if (bpmValue) {
-            bpmValue.textContent =
-                formatBpmDisplay(
-                    trackAnalysisBpm,
-                    trackAnalysisBpmConfidence
-                );
-        }
-
-        if (keyValue) {
-            keyValue.textContent =
-                Number.isInteger(
-                    trackAnalysisKeyIndex
-                )
-                    ? TRACK_ANALYSIS_NOTE_NAMES[
-                        trackAnalysisKeyIndex
-                    ]
-                    : '—';
-        }
-
-        if (scaleValue) {
-            const scaleDefinition =
-                trackAnalysisScaleDefinition(
-                    trackAnalysisScale
-                );
-
-            scaleValue.textContent =
-                scaleDefinition
-                    ?.short ||
-                '—';
-
-            scaleValue.title =
-                scaleDefinition
-                    ?.name ||
-                '';
-        }
-
-        if (camelotValue) {
-            if (
-                Number.isInteger(
-                    trackAnalysisKeyIndex
-                ) &&
-                (
-                    trackAnalysisScale ===
-                        'major' ||
-                    trackAnalysisScale ===
-                        'minor'
-                )
-            ) {
-                camelotValue.textContent =
-                    trackAnalysisScale ===
-                        'minor'
-                        ? TRACK_ANALYSIS_CAMELOT_MINOR[
-                            trackAnalysisKeyIndex
-                        ]
-                        : TRACK_ANALYSIS_CAMELOT_MAJOR[
-                            trackAnalysisKeyIndex
-                        ];
-
-                camelotValue.title =
-                    'Camelot code';
-
-            } else {
-                camelotValue.textContent =
-                    '—';
-
-                camelotValue.title =
-                    trackAnalysisScale
-                        ? 'Camelot is shown only for Major / Minor'
-                        : '';
-            }
-        }
-
-        if (tempoConfidence) {
-            tempoConfidence.textContent =
-                Number.isFinite(
-                    trackAnalysisBpm
-                )
-                    ? `TEMPO ${formatTrackAnalysisConfidence(trackAnalysisBpmConfidence)}`
-                    : elapsed <
-                        TRACK_ANALYSIS_BPM_MIN_SECONDS
-                        ? 'TEMPO LEARNING'
-                        : 'TEMPO ANALYSING';
-        }
-
-        if (keyConfidence) {
-            keyConfidence.textContent =
-                Number.isInteger(
-                    trackAnalysisKeyIndex
-                )
-                    ? `KEY ${formatTrackAnalysisConfidence(trackAnalysisKeyConfidence)}`
-                    : 'KEY LEARNING';
-        }
-
-        if (state) {
-            if (
-                trackAnalysisFromMemory &&
-                elapsed <
-                    TRACK_ANALYSIS_BPM_MIN_SECONDS
-            ) {
-                state.textContent =
-                    'REMEMBERED';
-
-                state.dataset.state =
-                    'active';
-
-            } else if (!hasAudio) {
-                state.textContent =
-                    'WAITING FOR AUDIO';
-
-                state.dataset.state =
-                    'waiting';
-
-            } else {
-                state.textContent =
-                    Number.isInteger(
-                        trackAnalysisKeyIndex
-                    )
-                        ? 'ANALYSING · KEY READY'
-                        : `ANALYSING ${Math.floor(elapsed)}s`;
-
-                state.dataset.state =
-                    'active';
-            }
-        }
-
-        panel.dataset.ready =
-            (
-                Number.isFinite(
-                    trackAnalysisBpm
-                ) ||
-                Number.isInteger(
-                    trackAnalysisKeyIndex
-                )
-            )
-                ? 'true'
-                : 'false';
-
-        rememberTrackAnalysis();
+        v2RenderAnalysisUI( panel );
     }
 
-    function sampleTempoOnset() {
-        if (
-            !trackAnalysisTempoAnalyser ||
-            !trackAnalysisTempoSpectrum ||
-            !trackAnalysisPreviousTempoSpectrum ||
-            !trackAnalysisTempoWeights ||
-            trackAnalysisTempoMaxBin <
-                1
-        ) {
-            return;
-        }
 
-        trackAnalysisTempoAnalyser
-            .getByteFrequencyData(
-                trackAnalysisTempoSpectrum
-            );
 
-        let flux =
-            0;
 
-        for (
-            let index = 1;
-            index <=
-                trackAnalysisTempoMaxBin;
-            index++
-        ) {
-            const current =
-                trackAnalysisTempoSpectrum[
-                    index
-                ];
-
-            const previous =
-                trackAnalysisPreviousTempoSpectrum[
-                    index
-                ];
-
-            const positive =
-                Math.max(
-                    0,
-                    current -
-                        previous
-                );
-
-            flux +=
-                positive *
-                trackAnalysisTempoWeights[
-                    index
-                ];
-
-            trackAnalysisPreviousTempoSpectrum[
-                index
-            ] =
-                current;
-        }
-
-        const normalizedFlux =
-            trackAnalysisTempoWeightTotal >
-                0
-                ? flux /
-                    (
-                        trackAnalysisTempoWeightTotal *
-                        255
-                    )
-                : 0;
-
-        if (
-            trackAnalysisFluxBaseline <=
-                0
-        ) {
-            trackAnalysisFluxBaseline =
-                normalizedFlux;
-
-        } else {
-            trackAnalysisFluxBaseline =
-                trackAnalysisFluxBaseline *
-                    0.94 +
-                normalizedFlux *
-                    0.06;
-        }
-
-        const onset =
-            Math.max(
-                0,
-                normalizedFlux -
-                    trackAnalysisFluxBaseline *
-                        0.72
-            );
-
-        const shaped =
-            Math.pow(
-                Math.min(
-                    1,
-                    onset *
-                        18
-                ),
-                0.78
-            );
-
-        trackAnalysisEnvelope.push(
-            shaped
-        );
-
-        if (
-            trackAnalysisEnvelope.length >
-                TRACK_ANALYSIS_MAX_ENVELOPE
-        ) {
-            trackAnalysisEnvelope.splice(
-                0,
-                trackAnalysisEnvelope.length -
-                    TRACK_ANALYSIS_MAX_ENVELOPE
-            );
-        }
-    }
-
-    function tempoCorrelationAtBpm(
-        values,
-        bpm,
-        mean
-    ) {
-        const lag =
-            (
-                60000 /
-                    bpm
-            ) /
-            TRACK_ANALYSIS_SAMPLE_MS;
-
-        const lagFloor =
-            Math.floor(
-                lag
-            );
-
-        const fraction =
-            lag -
-            lagFloor;
-
-        const start =
-            lagFloor +
-                1;
-
-        if (
-            start >=
-                values.length -
-                    2
-        ) {
-            return 0;
-        }
-
-        let numerator =
-            0;
-
-        let energyA =
-            0;
-
-        let energyB =
-            0;
-
-        for (
-            let index = start;
-            index <
-                values.length;
-            index++
-        ) {
-            const a =
-                values[
-                    index
-                ] -
-                mean;
-
-            const previousIndex =
-                index -
-                    lagFloor;
-
-            const b0 =
-                values[
-                    previousIndex
-                ] ||
-                0;
-
-            const b1 =
-                values[
-                    Math.max(
-                        0,
-                        previousIndex -
-                            1
-                    )
-                ] ||
-                0;
-
-            const b =
-                (
-                    b0 *
-                        (
-                            1 -
-                                fraction
-                        ) +
-                    b1 *
-                        fraction
-                ) -
-                mean;
-
-            numerator +=
-                a *
-                    b;
-
-            energyA +=
-                a *
-                    a;
-
-            energyB +=
-                b *
-                    b;
-        }
-
-        const denominator =
-            Math.sqrt(
-                energyA *
-                    energyB
-            );
-
-        return denominator >
-                0.000001
-            ? numerator /
-                denominator
-            : 0;
-    }
-
-    function estimateTrackBpm() {
-        const elapsed =
-            trackAnalysisElapsedSeconds();
-
-        if (
-            elapsed <
-                TRACK_ANALYSIS_BPM_MIN_SECONDS ||
-            trackAnalysisEnvelope.length <
-                Math.round(
-                    18000 /
-                    TRACK_ANALYSIS_SAMPLE_MS
-                )
-        ) {
-            return;
-        }
-
-        const maxSamples =
-            Math.min(
-                trackAnalysisEnvelope.length,
-                Math.round(
-                    40000 /
-                        TRACK_ANALYSIS_SAMPLE_MS
-                )
-            );
-
-        const values =
-            trackAnalysisEnvelope.slice(
-                -maxSamples
-            );
-
-        let mean =
-            0;
-
-        for (
-            const value
-            of values
-        ) {
-            mean +=
-                value;
-        }
-
-        mean /=
-            Math.max(
-                1,
-                values.length
-            );
-
-        let variance =
-            0;
-
-        for (
-            const value
-            of values
-        ) {
-            const delta =
-                value -
-                    mean;
-
-            variance +=
-                delta *
-                    delta;
-        }
-
-        variance /=
-            Math.max(
-                1,
-                values.length
-            );
-
-        /*
-            Sparse/flat passages do not contain enough rhythmic evidence.
-        */
-
-        if (
-            variance <
-                0.00035
-        ) {
-            return;
-        }
-
-        const minBpm =
-            70;
-
-        const maxBpm =
-            180;
-
-        const coarseStep =
-            0.5;
-
-        const scores =
-            [];
-
-        let bestBpm =
-            null;
-
-        let bestScore =
-            -Infinity;
-
-        /*
-            v8.5.53's peak-pair histogram was very cheap, but one interval can
-            be explained by many arbitrary beat counts. On some material that
-            produced convincing false clusters around 150–160 BPM.
-
-            Here each candidate must instead reproduce the periodicity of the
-            complete centred onset envelope. One correlation per candidate,
-            every four seconds, keeps this far lighter than the old v8.5.52
-            multi-lag autocorrelation sweep while rejecting many aliases.
-        */
-
-        for (
-            let bpm = minBpm;
-            bpm <=
-                maxBpm;
-            bpm +=
-                coarseStep
-        ) {
-            const score =
-                Math.max(
-                    0,
-                    tempoCorrelationAtBpm(
-                        values,
-                        bpm,
-                        mean
-                    )
-                );
-
-            scores.push(
-                {
-                    bpm,
-                    score
-                }
-            );
-
-            if (
-                score >
-                    bestScore
-            ) {
-                bestScore =
-                    score;
-
-                bestBpm =
-                    bpm;
-            }
-        }
-
-        if (
-            !Number.isFinite(
-                bestBpm
-            ) ||
-            bestScore <
-                0.10
-        ) {
-            return;
-        }
-
-        /*
-            Half-time ambiguity is common with four-on-the-floor material.
-            If the strongest result falls below 90 BPM, prefer its double only
-            when the doubled pulse itself has strong independent evidence.
-            This avoids blindly forcing genuinely slow material upward.
-        */
-
-        if (
-            bestBpm <
-                90 &&
-            bestBpm *
-                2 <=
-                maxBpm
-        ) {
-            const doubledBpm =
-                bestBpm *
-                    2;
-
-            const doubledScore =
-                Math.max(
-                    0,
-                    tempoCorrelationAtBpm(
-                        values,
-                        doubledBpm,
-                        mean
-                    )
-                );
-
-            if (
-                doubledScore >=
-                    bestScore *
-                        0.82
-            ) {
-                bestBpm =
-                    doubledBpm;
-
-                bestScore =
-                    doubledScore;
-            }
-        }
-
-        /*
-            Fine pass only around the chosen family. This gives the display a
-            useful decimal without another expensive full-resolution sweep.
-        */
-
-        let refinedBpm =
-            bestBpm;
-
-        let refinedScore =
-            bestScore;
-
-        for (
-            let bpm =
-                Math.max(
-                    minBpm,
-                    bestBpm -
-                        0.8
-                );
-            bpm <=
-                Math.min(
-                    maxBpm,
-                    bestBpm +
-                        0.8
-                );
-            bpm +=
-                0.05
-        ) {
-            const score =
-                Math.max(
-                    0,
-                    tempoCorrelationAtBpm(
-                        values,
-                        bpm,
-                        mean
-                    )
-                );
-
-            if (
-                score >
-                    refinedScore
-            ) {
-                refinedScore =
-                    score;
-
-                refinedBpm =
-                    bpm;
-            }
-        }
-
-        let secondScore =
-            0;
-
-        for (
-            const candidate
-            of scores
-        ) {
-            const difference =
-                Math.abs(
-                    candidate.bpm -
-                        refinedBpm
-                );
-
-            const sameHalfDoubleFamily =
-                Math.abs(
-                    candidate.bpm *
-                        2 -
-                    refinedBpm
-                ) <
-                    2 ||
-                Math.abs(
-                    candidate.bpm -
-                    refinedBpm *
-                        2
-                ) <
-                    2;
-
-            if (
-                difference <
-                    3.5 ||
-                sameHalfDoubleFamily
-            ) {
-                continue;
-            }
-
-            secondScore =
-                Math.max(
-                    secondScore,
-                    candidate.score
-                );
-        }
-
-        const separation =
-            Math.max(
-                0,
-                refinedScore -
-                    secondScore
-            );
-
-        const confidence =
-            clamp01(
-                (
-                    refinedScore -
-                        0.12
-                ) *
-                    0.92 +
-                separation *
-                    1.45 +
-                Math.min(
-                    0.18,
-                    elapsed /
-                        120
-                )
-            );
-
-        if (
-            confidence <
-                TRACK_ANALYSIS_BPM_MIN_CONFIDENCE
-        ) {
-            return;
-        }
-
-        if (
-            trackAnalysisBpm ===
-                null
-        ) {
-            trackAnalysisBpm =
-                refinedBpm;
-
-        } else {
-            const difference =
-                Math.abs(
-                    refinedBpm -
-                        trackAnalysisBpm
-                );
-
-            const blend =
-                trackAnalysisBpmConfidence >
-                    0.72
-                    ? 0.10
-                    : 0.28;
-
-            if (
-                difference <
-                    4.0
-            ) {
-                trackAnalysisBpm =
-                    trackAnalysisBpm *
-                        (
-                            1 -
-                                blend
-                        ) +
-                    refinedBpm *
-                        blend;
-
-            } else if (
-                confidence >
-                    trackAnalysisBpmConfidence +
-                        0.10
-            ) {
-                trackAnalysisBpm =
-                    refinedBpm;
-            }
-        }
-
-        trackAnalysisBpmConfidence =
-            Math.max(
-                trackAnalysisBpmConfidence *
-                    0.92,
-                confidence
-            );
-    }
-
-    function sampleTrackKeyChroma() {
-        if (
-            !trackAnalysisKeyAnalyser ||
-            !trackAnalysisKeySpectrum ||
-            !trackAnalysisKeyPitchClasses ||
-            !trackAnalysisKeyStaticWeights ||
-            trackAnalysisKeyEndBin <
-                trackAnalysisKeyStartBin
-        ) {
-            return;
-        }
-
-        trackAnalysisKeyAnalyser
-            .getFloatFrequencyData(
-                trackAnalysisKeySpectrum
-            );
-
-        const frame =
-            new Float64Array(
-                12
-            );
-
-        let frameTotal =
-            0;
-
-        for (
-            let index =
-                trackAnalysisKeyStartBin;
-            index <=
-                trackAnalysisKeyEndBin;
-            index++
-        ) {
-            const db =
-                trackAnalysisKeySpectrum[
-                    index
-                ];
-
-            if (
-                !Number.isFinite(
-                    db
-                ) ||
-                db <
-                    -88
-            ) {
-                continue;
-            }
-
-            const pitchClass =
-                trackAnalysisKeyPitchClasses[
-                    index
-                ];
-
-            if (
-                pitchClass <
-                    0
-            ) {
-                continue;
-            }
-
-            const level =
-                Math.pow(
-                    clamp01(
-                        (
-                            db +
-                                88
-                        ) /
-                            66
-                    ),
-                    2.15
-                );
-
-            const weight =
-                level *
-                trackAnalysisKeyStaticWeights[
-                    index
-                ];
-
-            frame[
-                pitchClass
-            ] +=
-                weight;
-
-            frameTotal +=
-                weight;
-        }
-
-        if (
-            frameTotal <
-                0.03
-        ) {
-            return;
-        }
-
-        for (
-            let index = 0;
-            index <
-                12;
-            index++
-        ) {
-            trackAnalysisChroma[
-                index
-            ] =
-                trackAnalysisChroma[
-                    index
-                ] *
-                    0.992 +
-                (
-                    frame[
-                        index
-                    ] /
-                    frameTotal
-                );
-        }
-
-        trackAnalysisChromaFrames++;
-    }
 
     function trackAnalysisScaleDefinition(
         id
@@ -8420,754 +7441,10 @@
         );
     }
 
-    function trackAnalysisScaleProfile(
-        definition
-    ) {
-        if (
-            definition.id ===
-                'major'
-        ) {
-            return TRACK_ANALYSIS_MAJOR_PROFILE;
-        }
 
-        if (
-            definition.id ===
-                'minor'
-        ) {
-            return TRACK_ANALYSIS_MINOR_PROFILE;
-        }
 
-        if (
-            definition.__profile
-        ) {
-            return definition.__profile;
-        }
 
-        const profile =
-            new Array(
-                12
-            )
-                .fill(
-                    0.55
-                );
 
-        for (
-            const interval
-            of definition.intervals
-        ) {
-            profile[
-                interval
-            ] =
-                2.50;
-        }
-
-        profile[
-            0
-        ] =
-            5.80;
-
-        if (
-            definition.intervals.includes(
-                7
-            )
-        ) {
-            profile[
-                7
-            ] =
-                4.10;
-        }
-
-        for (
-            const interval
-            of definition.signature
-        ) {
-            profile[
-                interval
-            ] =
-                Math.max(
-                    profile[
-                        interval
-                    ],
-                    3.65
-                );
-        }
-
-        definition.__profile =
-            profile;
-
-        return profile;
-    }
-
-    function trackAnalysisScaleCandidateScore(
-        chroma,
-        definition,
-        tonic
-    ) {
-        const correlation =
-            Math.max(
-                0,
-                keyProfileCorrelation(
-                    chroma,
-                    trackAnalysisScaleProfile(
-                        definition
-                    ),
-                    tonic
-                )
-            );
-
-        let inScaleEnergy =
-            0;
-
-        for (
-            const interval
-            of definition.intervals
-        ) {
-            inScaleEnergy +=
-                chroma[
-                    (
-                        tonic +
-                            interval
-                    ) %
-                        12
-                ];
-        }
-
-        const outScaleEnergy =
-            Math.max(
-                0,
-                1 -
-                    inScaleEnergy
-            );
-
-        const insideDensity =
-            inScaleEnergy /
-            Math.max(
-                1,
-                definition.intervals.length
-            );
-
-        const outsideDensity =
-            outScaleEnergy /
-            Math.max(
-                1,
-                12 -
-                    definition.intervals.length
-            );
-
-        const contrast01 =
-            clamp01(
-                (
-                    (
-                        insideDensity -
-                            outsideDensity
-                    ) /
-                    Math.max(
-                        0.000001,
-                        insideDensity +
-                            outsideDensity
-                    ) +
-                    1
-                ) /
-                    2
-            );
-
-        let signatureEnergy =
-            0;
-
-        for (
-            const interval
-            of definition.signature
-        ) {
-            signatureEnergy +=
-                chroma[
-                    (
-                        tonic +
-                            interval
-                    ) %
-                        12
-                ];
-        }
-
-        signatureEnergy /=
-            Math.max(
-                1,
-                definition.signature.length
-            );
-
-        const maximum =
-            Math.max(
-                ...chroma
-            );
-
-        const coverageThreshold =
-            Math.max(
-                0.008,
-                maximum *
-                    0.10
-            );
-
-        let covered =
-            0;
-
-        for (
-            const interval
-            of definition.intervals
-        ) {
-            if (
-                chroma[
-                    (
-                        tonic +
-                            interval
-                    ) %
-                        12
-                ] >=
-                    coverageThreshold
-            ) {
-                covered++;
-            }
-        }
-
-        const coverage =
-            covered /
-            Math.max(
-                1,
-                definition.intervals.length
-            );
-
-        return (
-            correlation *
-                0.58 +
-            contrast01 *
-                0.18 +
-            signatureEnergy *
-                0.50 +
-            chroma[
-                tonic
-            ] *
-                0.22 +
-            coverage *
-                0.07 +
-            definition.prior
-        );
-    }
-
-    function keyProfileCorrelation(
-        chroma,
-        profile,
-        tonic
-    ) {
-        let chromaMean =
-            0;
-
-        let profileMean =
-            0;
-
-        for (
-            let index = 0;
-            index <
-                12;
-            index++
-        ) {
-            chromaMean +=
-                chroma[
-                    (
-                        tonic +
-                        index
-                    ) %
-                    12
-                ];
-
-            profileMean +=
-                profile[
-                    index
-                ];
-        }
-
-        chromaMean /=
-            12;
-
-        profileMean /=
-            12;
-
-        let numerator =
-            0;
-
-        let chromaEnergy =
-            0;
-
-        let profileEnergy =
-            0;
-
-        for (
-            let index = 0;
-            index <
-                12;
-            index++
-        ) {
-            const a =
-                chroma[
-                    (
-                        tonic +
-                        index
-                    ) %
-                    12
-                ] -
-                chromaMean;
-
-            const b =
-                profile[
-                    index
-                ] -
-                profileMean;
-
-            numerator +=
-                a *
-                b;
-
-            chromaEnergy +=
-                a *
-                a;
-
-            profileEnergy +=
-                b *
-                b;
-        }
-
-        const denominator =
-            Math.sqrt(
-                chromaEnergy *
-                profileEnergy
-            );
-
-        return denominator >
-            0.000001
-            ? numerator /
-                denominator
-            : 0;
-    }
-
-    function estimateTrackKey() {
-        const elapsed =
-            trackAnalysisElapsedSeconds();
-
-        if (
-            elapsed <
-                TRACK_ANALYSIS_KEY_MIN_SECONDS ||
-            trackAnalysisChromaFrames <
-                6
-        ) {
-            return;
-        }
-
-        let total =
-            0;
-
-        for (
-            const value
-            of trackAnalysisChroma
-        ) {
-            total +=
-                value;
-        }
-
-        if (
-            total <
-                0.20
-        ) {
-            return;
-        }
-
-        const normalized =
-            Array.from(
-                trackAnalysisChroma,
-                value =>
-                    value /
-                        total
-            );
-
-        const rootCandidates =
-            [];
-
-        for (
-            let tonic = 0;
-            tonic <
-                12;
-            tonic++
-        ) {
-            const majorScore =
-                Math.max(
-                    0,
-                    keyProfileCorrelation(
-                        normalized,
-                        TRACK_ANALYSIS_MAJOR_PROFILE,
-                        tonic
-                    )
-                );
-
-            const minorScore =
-                Math.max(
-                    0,
-                    keyProfileCorrelation(
-                        normalized,
-                        TRACK_ANALYSIS_MINOR_PROFILE,
-                        tonic
-                    )
-                );
-
-            const tonicEnergy =
-                normalized[
-                    tonic
-                ];
-
-            const fifthEnergy =
-                normalized[
-                    (
-                        tonic +
-                            7
-                    ) %
-                        12
-                ];
-
-            rootCandidates.push({
-                tonic,
-                score:
-                    Math.max(
-                        majorScore,
-                        minorScore
-                    ) *
-                        0.82 +
-                    tonicEnergy *
-                        0.12 +
-                    fifthEnergy *
-                        0.06
-            });
-        }
-
-        rootCandidates.sort(
-            (
-                a,
-                b
-            ) =>
-                b.score -
-                    a.score
-        );
-
-        const best =
-            rootCandidates[
-                0
-            ];
-
-        const runnerUp =
-            rootCandidates[
-                1
-            ];
-
-        if (
-            !best ||
-            best.score <
-                0.28
-        ) {
-            return;
-        }
-
-        const separation =
-            Math.max(
-                0,
-                best.score -
-                    (
-                        runnerUp
-                            ?.score ||
-                        0
-                    )
-            );
-
-        const concentration =
-            Math.max(
-                ...normalized
-            ) -
-            Math.min(
-                ...normalized
-            );
-
-        const confidence =
-            clamp01(
-                (
-                    best.score -
-                        0.30
-                ) *
-                    1.10 +
-                separation *
-                    2.35 +
-                concentration *
-                    0.48 +
-                Math.min(
-                    0.16,
-                    elapsed /
-                        100
-                )
-            );
-
-        /*
-            The user-facing KEY is confidence-gated. Before 72%, STRATA keeps
-            listening instead of publishing a guess.
-        */
-
-        if (
-            confidence <
-                TRACK_ANALYSIS_KEY_MIN_CONFIDENCE
-        ) {
-            return;
-        }
-
-        if (
-            trackAnalysisKeyIndex ===
-                null
-        ) {
-            trackAnalysisKeyIndex =
-                best.tonic;
-
-            trackAnalysisKeyConfidence =
-                confidence;
-
-            return;
-        }
-
-        if (
-            trackAnalysisKeyIndex ===
-                best.tonic
-        ) {
-            trackAnalysisKeyConfidence =
-                Math.max(
-                    trackAnalysisKeyConfidence *
-                        0.96,
-                    confidence
-                );
-
-            return;
-        }
-
-        /*
-            Once published, a different tonic needs materially stronger
-            evidence before replacing the displayed Key.
-        */
-
-        if (
-            confidence >
-                trackAnalysisKeyConfidence +
-                    0.10
-        ) {
-            trackAnalysisKeyIndex =
-                best.tonic;
-
-            trackAnalysisKeyConfidence =
-                confidence;
-
-            trackAnalysisScale =
-                null;
-
-            trackAnalysisScaleConfidence =
-                0;
-        }
-    }
-
-    function estimateTrackScale() {
-        const elapsed =
-            trackAnalysisElapsedSeconds();
-
-        if (
-            elapsed <
-                TRACK_ANALYSIS_SCALE_MIN_SECONDS ||
-            !Number.isInteger(
-                trackAnalysisKeyIndex
-            ) ||
-            trackAnalysisChromaFrames <
-                26
-        ) {
-            return;
-        }
-
-        let total =
-            0;
-
-        for (
-            const value
-            of trackAnalysisChroma
-        ) {
-            total +=
-                value;
-        }
-
-        if (
-            total <
-                0.30
-        ) {
-            return;
-        }
-
-        const normalized =
-            Array.from(
-                trackAnalysisChroma,
-                value =>
-                    value /
-                        total
-            );
-
-        const tonic =
-            trackAnalysisKeyIndex;
-
-        const candidates =
-            TRACK_ANALYSIS_SCALE_DEFINITIONS
-                .map(
-                    definition => ({
-                        tonic,
-                        scale:
-                            definition.id,
-                        definition,
-                        score:
-                            trackAnalysisScaleCandidateScore(
-                                normalized,
-                                definition,
-                                tonic
-                            )
-                    })
-                )
-                .sort(
-                    (
-                        a,
-                        b
-                    ) =>
-                        b.score -
-                            a.score
-                );
-
-        let best =
-            candidates[
-                0
-            ];
-
-        const commonFallback =
-            candidates.find(
-                candidate =>
-                    candidate.scale ===
-                        'major' ||
-                    candidate.scale ===
-                        'minor'
-            );
-
-        if (
-            best &&
-            commonFallback &&
-            best.scale !==
-                'major' &&
-            best.scale !==
-                'minor' &&
-            best.score <
-                commonFallback.score +
-                    best.definition
-                        .minAdvantage
-        ) {
-            best =
-                commonFallback;
-        }
-
-        const runnerUp =
-            candidates.find(
-                candidate =>
-                    candidate.scale !==
-                        best.scale
-            ) ||
-            candidates[
-                1
-            ];
-
-        if (
-            !best ||
-            best.score <
-                0.28
-        ) {
-            return;
-        }
-
-        const separation =
-            Math.max(
-                0,
-                best.score -
-                    (
-                        runnerUp
-                            ?.score ||
-                        0
-                    )
-            );
-
-        const concentration =
-            Math.max(
-                ...normalized
-            ) -
-            Math.min(
-                ...normalized
-            );
-
-        const confidence =
-            clamp01(
-                (
-                    best.score -
-                        0.24
-                ) *
-                    0.82 +
-                separation *
-                    1.80 +
-                concentration *
-                    0.44 +
-                Math.min(
-                    0.16,
-                    elapsed /
-                        180
-                )
-            );
-
-        /*
-            Scale is intentionally late and conservative. Ambiguous material
-            stays blank rather than being forced into a mode.
-        */
-
-        if (
-            confidence <
-                TRACK_ANALYSIS_SCALE_MIN_CONFIDENCE
-        ) {
-            return;
-        }
-
-        if (
-            trackAnalysisScale ===
-                null ||
-            trackAnalysisScale ===
-                best.scale
-        ) {
-            trackAnalysisScale =
-                best.scale;
-
-            trackAnalysisScaleConfidence =
-                Math.max(
-                    trackAnalysisScaleConfidence *
-                        0.95,
-                    confidence
-                );
-
-            return;
-        }
-
-        if (
-            confidence >
-                trackAnalysisScaleConfidence +
-                    0.10
-        ) {
-            trackAnalysisScale =
-                best.scale;
-
-            trackAnalysisScaleConfidence =
-                confidence;
-        }
-    }
 
     function sampleTrackAnalysis() {
         if (
@@ -9178,101 +7455,12 @@
         }
 
         /*
-            Only run the (headless) spectral analysis when its readout is
-            actually on screen. The analysis panel is visible exactly when
-            the player is expanded and no utility panel is covering it.
-            When it's hidden there is no consumer for the BPM/key data, so
-            skipping the per-tick sampling saves continuous CPU (~25/sec)
-            for users who aren't looking at the analysis. The accumulated
-            estimate is left intact (not reset), so reopening the panel
-            resumes rather than restarting.
+            The analysis engine keeps listening while the panel is
+            collapsed (it is light: ~3 extra FFTs per second), so the
+            saved result covers the whole track. It only redraws the
+            readout when the panel is on screen.
         */
-
-        if (
-            !expanded ||
-            utilityPanelOpen
-        ) {
-            return;
-        }
-
-        const id =
-            currentVideoId();
-
-        if (
-            id !==
-            trackAnalysisTrackId
-        ) {
-            resetTrackAnalysis(
-                id
-            );
-        }
-
-        const video =
-            currentMainVideo();
-
-        if (
-            !video ||
-            video.paused
-        ) {
-            return;
-        }
-
-        if (
-            !trackAnalysisTempoAnalyser ||
-            !trackAnalysisKeyAnalyser
-        ) {
-            attachVisualizerAudio();
-
-            updateTrackAnalysisUI();
-
-            return;
-        }
-
-        sampleTempoOnset();
-
-        const now =
-            performance.now();
-
-        if (
-            now -
-                trackAnalysisLastKeySampleAt >=
-            TRACK_ANALYSIS_KEY_SAMPLE_MS
-        ) {
-            trackAnalysisLastKeySampleAt =
-                now;
-
-            sampleTrackKeyChroma();
-
-            estimateTrackKey();
-
-            updateTrackAnalysisUI();
-        }
-
-        if (
-            now -
-                trackAnalysisLastScaleRefreshAt >=
-            TRACK_ANALYSIS_SCALE_REFRESH_MS
-        ) {
-            trackAnalysisLastScaleRefreshAt =
-                now;
-
-            estimateTrackScale();
-
-            updateTrackAnalysisUI();
-        }
-
-        if (
-            now -
-                trackAnalysisLastBpmRefreshAt >=
-            TRACK_ANALYSIS_BPM_REFRESH_MS
-        ) {
-            trackAnalysisLastBpmRefreshAt =
-                now;
-
-            estimateTrackBpm();
-
-            updateTrackAnalysisUI();
-        }
+        v2Tick();
     }
 
     function startTrackAnalysis() {
@@ -9294,6 +7482,1260 @@
 
         attachVisualizerAudio();
     }
+
+    /* STRATA_ANALYSIS_V2_BEGIN */
+    // ============================================================
+    // TRACK ANALYSIS ENGINE v2 (v8.5.97)
+    //
+    // Runs on the same passive captured audio as the visual engine.
+    // Nothing leaves the browser.
+    //
+    // TEMPO  A dedicated low-pass (kick band) energy envelope is
+    //        timestamped against the video's media clock, so timer
+    //        jitter, pauses and ads never smear the beat grid. Each
+    //        20 s block is scored with a phase-coherent comb across
+    //        60–200 BPM in 0.05 steps; blocks are summed over the
+    //        whole track, refined, then snapped to a whole BPM when
+    //        the evidence supports it.
+    // KEY    A dedicated high-resolution spectrum is cleaned with a
+    //        harmonic/percussive split (time-median vs frequency-
+    //        median soft mask). Once the beat grid is known, snapshots
+    //        are taken half-way between kicks. Spectral peaks give a
+    //        tuning estimate (cents off A440) and a tuning-corrected
+    //        chroma, which accumulates over the full track and is
+    //        matched against EDM-derived key profiles (Faraldo edma).
+    //        Weak or flat tonal evidence is reported as "No clear key".
+    // MEMORY The full-track chroma, tuning and tempo are remembered,
+    //        so replays continue refining instead of starting over.
+    // ============================================================
+
+    const ANALYSIS_LOG_KEY =
+        'strata_v8597_analysis_log';
+
+    const ANALYSIS_LOG_LIMIT = 40;
+
+
+    const V2_EDMA_MAJOR = [ 1.00, 0.29, 0.50, 0.40, 0.60, 0.56, 0.32, 0.80, 0.31, 0.45, 0.42, 0.39 ];
+    const V2_EDMA_MINOR = [ 1.00, 0.31, 0.44, 0.58, 0.33, 0.49, 0.29, 0.78, 0.43, 0.29, 0.53, 0.32 ];
+    const V2_MINOR_BIAS = 0.01;
+
+    const V2_BPM_MIN = 40; // evidence grid floor (sub-harmonic support)
+    const V2_BPM_REPORT_MIN = 60;
+    const V2_BPM_MAX = 200;
+    const V2_BPM_STEP = 0.05;
+    const V2_BPM_COUNT = Math.round( ( V2_BPM_MAX - V2_BPM_MIN ) / V2_BPM_STEP ) + 1;
+    const V2_TEMPO_BLOCK_SECONDS = 20;
+    const V2_TEMPO_ESTIMATE_MS = 3000;
+    const V2_KEY_ESTIMATE_MS = 2000;
+    const V2_UI_MS = 500;
+    const V2_REMEMBER_MS = 10000;
+
+    const V2_KEY_PROVISIONAL_SECONDS = 10;
+    const V2_KEY_FIRM_SECONDS = 45;
+    const V2_NO_KEY_SECONDS = 40;
+    const V2_FINAL_COVERAGE = 0.8;
+    const V2_FINAL_SECONDS = 330;
+
+    const V2_HARMONIC_FFT = 16384;
+    const V2_KICK_FFT = 4096;
+    const V2_HPSS_FRAMES = 5;
+    const V2_FREQ_MEDIAN_HALF = 12;
+    const V2_LOW_HZ = 45;
+    const V2_HIGH_HZ = 5000;
+
+    const V2_NOTE_NAMES = [ 'C', 'C♯', 'D', 'E♭', 'E', 'F', 'F♯', 'G', 'A♭', 'A', 'B♭', 'B' ];
+
+    const v2Omega0 = 2 * Math.PI * V2_BPM_MIN / 60;
+    const v2OmegaStep = 2 * Math.PI * V2_BPM_STEP / 60;
+
+    let v2 = null;
+    let v2Nodes = null;
+
+    function v2NewState( trackId ) {
+        return {
+            trackId: trackId || null,
+            // timing
+            lastMediaTime: null,
+            seconds: 0,
+            priorSeconds: 0,
+            // tempo
+            kickRef: 0,
+            kickPrevLevel: null,
+            blockStart: null,
+            blockRe: new Float64Array( V2_BPM_COUNT ),
+            blockIm: new Float64Array( V2_BPM_COUNT ),
+            blockW: 0,
+            prevRe: null,
+            prevIm: null,
+            tempoTotal: new Float64Array( V2_BPM_COUNT ),
+            tempoBlocks: 0,
+            tempoSeconds: 0,
+            lastTempoEstimateAt: 0,
+            bpm: null,
+            bpmRaw: null,
+            bpmConfidence: 0,
+            bpmHalfRatio: null,
+            bpmDoubleRatio: null,
+            beatPhase: null,
+            beatPeriod: null,
+            // key
+            hpssRing: null,
+            hpssCount: 0,
+            hpssIndex: 0,
+            lastSnapshotAt: -Infinity,
+            snapshots: 0,
+            gatedSnapshots: 0,
+            chroma: new Float64Array( 12 ),
+            chromaHigh: new Float64Array( 12 ),
+            chromaWeight: 0,
+            tonalSum: 0,
+            tonalFrames: 0,
+            tuneRe: 0,
+            tuneIm: 0,
+            tuneW: 0,
+            lastKeyEstimateAt: 0,
+            keyIndex: null,
+            keyScale: null,
+            keyConfidence: 0,
+            keyR: 0,
+            keyRunnerUp: null,
+            keyRunnerUpR: 0,
+            keyState: 'learning',
+            noKey: false,
+            // memory
+            restored: false,
+            restoredFinal: false,
+            final: false,
+            lastRememberAt: 0,
+            lastUiAt: 0,
+            duration: 0
+        };
+    }
+
+    function v2EnsureNodes() {
+        if ( !visualizerContext || !visualizerSource ) {
+            return false;
+        }
+
+        if ( v2Nodes && v2Nodes.context === visualizerContext && v2Nodes.source === visualizerSource ) {
+            return true;
+        }
+
+        try {
+            const context = visualizerContext;
+
+            const lowpass = context.createBiquadFilter();
+            lowpass.type = 'lowpass';
+            lowpass.frequency.value = 150;
+            lowpass.Q.value = 0.707;
+
+            const kick = context.createAnalyser();
+            kick.fftSize = V2_KICK_FFT;
+            kick.smoothingTimeConstant = 0;
+
+            const harmonic = context.createAnalyser();
+            harmonic.fftSize = V2_HARMONIC_FFT;
+            harmonic.smoothingTimeConstant = 0;
+            harmonic.minDecibels = -120;
+            harmonic.maxDecibels = -10;
+
+            visualizerSource.connect( lowpass );
+            lowpass.connect( kick );
+            visualizerSource.connect( harmonic );
+
+            const binHz = context.sampleRate / V2_HARMONIC_FFT;
+            const startBin = Math.max( 2, Math.floor( V2_LOW_HZ / binHz ) );
+            const endBin = Math.min( harmonic.frequencyBinCount - 3, Math.ceil( V2_HIGH_HZ / binHz ) );
+
+            v2Nodes = {
+                context,
+                source: visualizerSource,
+                kick,
+                harmonic,
+                kickBuffer: new Float32Array( kick.fftSize ),
+                spectrum: new Float32Array( harmonic.frequencyBinCount ),
+                binHz,
+                startBin,
+                endBin,
+                bandSize: endBin - startBin + 1,
+                windowCentre: 0.5 * V2_HARMONIC_FFT / context.sampleRate,
+                amp: new Float64Array( endBin - startBin + 1 ),
+                percussive: new Float64Array( endBin - startBin + 1 ),
+                scratch: new Float64Array( 2 * V2_FREQ_MEDIAN_HALF + 1 )
+            };
+
+            return true;
+        } catch ( error ) {
+            console.debug( '[STRATA] analysis v2 nodes unavailable', error );
+            v2Nodes = null;
+            return false;
+        }
+    }
+
+    // ---------- small numeric helpers ----------
+
+    function v2Quickselect( values, length, k ) {
+        let left = 0;
+        let right = length - 1;
+
+        while ( right > left ) {
+            const pivot = values[ ( left + right ) >> 1 ];
+            let i = left;
+            let j = right;
+
+            while ( i <= j ) {
+                while ( values[ i ] < pivot ) {
+                    i++;
+                }
+                while ( values[ j ] > pivot ) {
+                    j--;
+                }
+                if ( i <= j ) {
+                    const swap = values[ i ];
+                    values[ i ] = values[ j ];
+                    values[ j ] = swap;
+                    i++;
+                    j--;
+                }
+            }
+
+            if ( k <= j ) {
+                right = j;
+            } else if ( k >= i ) {
+                left = i;
+            } else {
+                break;
+            }
+        }
+
+        return values[ k ];
+    }
+
+    function v2Pearson( chroma, profile, tonic ) {
+        let meanA = 0;
+        let meanB = 0;
+
+        for ( let i = 0; i < 12; i++ ) {
+            meanA += chroma[ ( tonic + i ) % 12 ];
+            meanB += profile[ i ];
+        }
+
+        meanA /= 12;
+        meanB /= 12;
+
+        let numerator = 0;
+        let energyA = 0;
+        let energyB = 0;
+
+        for ( let i = 0; i < 12; i++ ) {
+            const a = chroma[ ( tonic + i ) % 12 ] - meanA;
+            const b = profile[ i ] - meanB;
+            numerator += a * b;
+            energyA += a * a;
+            energyB += b * b;
+        }
+
+        const denominator = Math.sqrt( energyA * energyB );
+        return denominator > 1e-12 ? numerator / denominator : 0;
+    }
+
+    function v2KeyLabel( index, scale ) {
+        if ( !Number.isInteger( index ) ) {
+            return '—';
+        }
+        const camelot = scale === 'minor' ? TRACK_ANALYSIS_CAMELOT_MINOR[ index ] : TRACK_ANALYSIS_CAMELOT_MAJOR[ index ];
+        return `${V2_NOTE_NAMES[ index ]} ${scale === 'minor' ? 'min' : 'maj'} (${camelot})`;
+    }
+
+    // ---------- reset / restore ----------
+
+    function v2Reset( trackId ) {
+        v2 = v2NewState( trackId );
+
+        const entry = trackId ? trackAnalysisMemory?.[ trackId ] : null;
+
+        if ( !entry || entry.e !== 2 ) {
+            return;
+        }
+
+        v2.restored = true;
+        v2.restoredFinal = Boolean( entry.f );
+        v2.final = Boolean( entry.f );
+        v2.priorSeconds = Number( entry.d ) || 0;
+
+        if ( Array.isArray( entry.c ) && entry.c.length === 12 && Number( entry.cw ) > 0 ) {
+            let total = 0;
+            for ( const value of entry.c ) {
+                total += Number( value ) || 0;
+            }
+            if ( total > 0 ) {
+                for ( let i = 0; i < 12; i++ ) {
+                    v2.chroma[ i ] = ( Number( entry.c[ i ] ) || 0 ) / total * entry.cw;
+                }
+                v2.chromaWeight = Number( entry.cw );
+
+                // High-band (>100 Hz) evidence is stored on the same scale.
+                if ( Array.isArray( entry.ch ) && entry.ch.length === 12 ) {
+                    for ( let i = 0; i < 12; i++ ) {
+                        v2.chromaHigh[ i ] = ( Number( entry.ch[ i ] ) || 0 ) / total * entry.cw;
+                    }
+                }
+            }
+        }
+
+        if ( Number.isFinite( entry.tu ) && Number( entry.tw ) > 0 ) {
+            const angle = 2 * Math.PI * entry.tu / 100;
+            v2.tuneRe = Math.cos( angle ) * entry.tw;
+            v2.tuneIm = Math.sin( angle ) * entry.tw;
+            v2.tuneW = Number( entry.tw );
+        }
+
+        v2.tonalSum = Number( entry.ts ) || 0;
+        v2.tonalFrames = Number( entry.tf ) || 0;
+        v2.noKey = Boolean( entry.nk );
+
+        if ( Number.isFinite( entry.b ) ) {
+            v2.bpm = entry.b;
+            v2.bpmConfidence = Number( entry.bc ) || 0.6;
+            v2.tempoSeconds = Number( entry.bd ) || 0;
+        }
+
+        if ( Number.isInteger( entry.k ) ) {
+            v2.keyIndex = entry.k;
+            v2.keyScale = entry.s === 'major' ? 'major' : 'minor';
+            v2.keyConfidence = Number( entry.kc ) || 0.6;
+            v2.keyState = entry.f ? 'final' : 'firm';
+        } else if ( entry.nk ) {
+            v2.keyState = 'none';
+        }
+    }
+
+    // ---------- tempo ----------
+
+    function v2SampleKick( mediaTime ) {
+        const nodes = v2Nodes;
+        nodes.kick.getFloatTimeDomainData( nodes.kickBuffer );
+
+        let energy = 0;
+        const buffer = nodes.kickBuffer;
+        for ( let i = 0; i < buffer.length; i++ ) {
+            energy += buffer[ i ] * buffer[ i ];
+        }
+        energy /= buffer.length;
+
+        v2.kickRef = Math.max( energy, v2.kickRef * 0.9995 );
+
+        const level = Math.log1p( 200 * energy / ( v2.kickRef + 1e-12 ) );
+        const previous = v2.kickPrevLevel;
+        v2.kickPrevLevel = level;
+
+        if ( previous === null ) {
+            return;
+        }
+
+        const onset = level - previous;
+
+        if ( v2.blockStart === null || mediaTime < v2.blockStart - 0.5 ) {
+            v2FinishTempoBlock( true );
+            v2.blockStart = mediaTime;
+        } else if ( mediaTime - v2.blockStart >= V2_TEMPO_BLOCK_SECONDS ) {
+            v2FinishTempoBlock( false );
+            v2.blockStart = mediaTime;
+        }
+
+        if ( onset <= 0 ) {
+            return;
+        }
+
+        // Rotating phasor across the BPM grid: two trig calls per onset.
+        const step = v2OmegaStep * mediaTime;
+        const stepCos = Math.cos( step );
+        const stepSin = Math.sin( step );
+        let c = Math.cos( v2Omega0 * mediaTime );
+        let s = Math.sin( v2Omega0 * mediaTime );
+        const re = v2.blockRe;
+        const im = v2.blockIm;
+
+        for ( let k = 0; k < V2_BPM_COUNT; k++ ) {
+            re[ k ] += onset * c;
+            im[ k ] += onset * s;
+            const nextC = c * stepCos - s * stepSin;
+            s = s * stepCos + c * stepSin;
+            c = nextC;
+        }
+
+        v2.blockW += onset;
+    }
+
+    function v2FinishTempoBlock( discontinuity ) {
+        if ( v2.blockStart === null ) {
+            return;
+        }
+
+        const duration = ( v2.lastMediaTime ?? v2.blockStart ) - v2.blockStart;
+
+        if ( v2.blockW > 1e-6 && ( !discontinuity || duration >= 8 ) ) {
+            const weight = Math.min( 1, Math.max( 0, duration ) / V2_TEMPO_BLOCK_SECONDS );
+            for ( let k = 0; k < V2_BPM_COUNT; k++ ) {
+                v2.tempoTotal[ k ] += weight * Math.hypot( v2.blockRe[ k ], v2.blockIm[ k ] ) / v2.blockW;
+            }
+            v2.tempoBlocks += weight;
+            v2.prevRe = v2.blockRe;
+            v2.prevIm = v2.blockIm;
+            v2.blockRe = new Float64Array( V2_BPM_COUNT );
+            v2.blockIm = new Float64Array( V2_BPM_COUNT );
+        } else {
+            v2.blockRe.fill( 0 );
+            v2.blockIm.fill( 0 );
+        }
+
+        v2.blockW = 0;
+    }
+
+    function v2TempoPrior( bpm ) {
+        const octaves = Math.log2( bpm / 122 );
+        return Math.exp( -( octaves * octaves ) / ( 2 * 0.55 * 0.55 ) );
+    }
+
+    function v2EstimateTempo( mediaTime ) {
+        const blockDuration = v2.blockStart === null ? 0 : Math.max( 0, mediaTime - v2.blockStart );
+        const partialWeight = v2.blockW > 1e-6 && blockDuration >= 6 ? Math.min( 1, blockDuration / V2_TEMPO_BLOCK_SECONDS ) : 0;
+        const effective = v2.tempoBlocks + partialWeight;
+
+        if ( effective < 0.6 ) {
+            return;
+        }
+
+        const score = new Float64Array( V2_BPM_COUNT );
+        for ( let k = 0; k < V2_BPM_COUNT; k++ ) {
+            let value = v2.tempoTotal[ k ];
+            if ( partialWeight > 0 ) {
+                value += partialWeight * Math.hypot( v2.blockRe[ k ], v2.blockIm[ k ] ) / v2.blockW;
+            }
+            score[ k ] = value / effective;
+        }
+
+        // A true pulse is usually backed by energy at half its rate
+        // (bars, kick patterns). A harmonic of a slower kick train is
+        // not, which stops e.g. 132 winning on an 88 BPM half-time beat.
+        const halfSupport = k => {
+            const target = ( V2_BPM_MIN + k * V2_BPM_STEP ) / 2;
+            if ( target < V2_BPM_MIN ) {
+                return 0;
+            }
+            const centre = Math.round( ( target - V2_BPM_MIN ) / V2_BPM_STEP );
+            let best = 0;
+            for ( let j = Math.max( 0, centre - 4 ); j <= Math.min( V2_BPM_COUNT - 1, centre + 4 ); j++ ) {
+                best = Math.max( best, score[ j ] );
+            }
+            return best;
+        };
+
+        const reportFloorK = Math.round( ( V2_BPM_REPORT_MIN - V2_BPM_MIN ) / V2_BPM_STEP );
+        const support = new Float64Array( V2_BPM_COUNT );
+        let bestK = -1;
+        let bestP = -Infinity;
+        for ( let k = Math.max( 1, reportFloorK ); k < V2_BPM_COUNT - 1; k++ ) {
+            if ( score[ k ] < score[ k - 1 ] || score[ k ] < score[ k + 1 ] ) {
+                continue;
+            }
+            support[ k ] = score[ k ] + 0.5 * halfSupport( k );
+            const p = support[ k ] * v2TempoPrior( V2_BPM_MIN + k * V2_BPM_STEP );
+            if ( p > bestP ) {
+                bestP = p;
+                bestK = k;
+            }
+        }
+
+        if ( bestK < 1 ) {
+            return;
+        }
+
+        const a = score[ bestK - 1 ];
+        const b = score[ bestK ];
+        const c = score[ bestK + 1 ];
+        const curve = a - 2 * b + c;
+        const delta = curve < 0 ? Math.max( -0.5, Math.min( 0.5, 0.5 * ( a - c ) / curve ) ) : 0;
+        const raw = V2_BPM_MIN + ( bestK + delta ) * V2_BPM_STEP;
+
+        const sorted = Float64Array.from( score ).sort();
+        const floor = sorted[ sorted.length >> 1 ] || 1e-9;
+        const peakRatio = b / floor;
+
+        // Strongest competitor that is not this pulse or a simple
+        // relative of it (½, ⅔, 1½, 2).
+        const relatives = [ 0.5, 2 / 3, 1.5, 2 ];
+        let rival = 0;
+        for ( let k = Math.max( 1, reportFloorK ); k < V2_BPM_COUNT - 1; k++ ) {
+            if ( !support[ k ] ) {
+                continue;
+            }
+            const bpm = V2_BPM_MIN + k * V2_BPM_STEP;
+            if ( Math.abs( bpm - raw ) < 4 ) {
+                continue;
+            }
+            if ( relatives.some( ratio => Math.abs( bpm - raw * ratio ) < raw * ratio * 0.025 ) ) {
+                continue;
+            }
+            rival = Math.max( rival, support[ k ] * v2TempoPrior( bpm ) );
+        }
+
+        const separation = clamp01( 1 - rival / bestP );
+        const strength = clamp01( ( peakRatio - 1.6 ) / 2.4 );
+        const maturity = clamp01( effective / 3 );
+        const confidence = clamp01( 0.15 + separation * 0.45 + strength * 0.3 + maturity * 0.1 );
+
+        const ratioAt = target => {
+            if ( target < V2_BPM_REPORT_MIN || target > V2_BPM_MAX ) {
+                return null;
+            }
+            const k = Math.round( ( target - V2_BPM_MIN ) / V2_BPM_STEP );
+            let best = 0;
+            for ( let j = Math.max( 0, k - 10 ); j <= Math.min( V2_BPM_COUNT - 1, k + 10 ); j++ ) {
+                best = Math.max( best, score[ j ] );
+            }
+            return Math.round( best / b * 100 ) / 100;
+        };
+
+        let bpm = raw;
+        if ( confidence >= 0.55 && Math.abs( raw - Math.round( raw ) ) <= 0.25 ) {
+            bpm = Math.round( raw );
+        }
+
+        v2.bpmRaw = raw;
+        v2.bpmHalfRatio = ratioAt( raw / 2 );
+        v2.bpmDoubleRatio = ratioAt( raw * 2 );
+        v2.bpmPeakRatio = peakRatio;
+
+        // Beat phase for drum-avoiding key snapshots.
+        const phaseRe = v2.blockW > 1e-6 && blockDuration >= 6 ? v2.blockRe : v2.prevRe;
+        const phaseIm = v2.blockW > 1e-6 && blockDuration >= 6 ? v2.blockIm : v2.prevIm;
+        if ( phaseRe && confidence >= 0.5 ) {
+            const omega = 2 * Math.PI * raw / 60;
+            v2.beatPeriod = 60 / raw;
+            v2.beatPhase = Math.atan2( phaseIm[ bestK ], phaseRe[ bestK ] ) / omega;
+        } else {
+            v2.beatPeriod = null;
+            v2.beatPhase = null;
+        }
+
+        // A remembered full-track tempo is only replaced by stronger
+        // or longer evidence.
+        if ( v2.restoredFinal && Number.isFinite( v2.bpm ) && v2.tempoSeconds > v2.seconds ) {
+            return;
+        }
+
+        if ( confidence < TRACK_ANALYSIS_BPM_MIN_CONFIDENCE ) {
+            // Not enough rhythmic evidence (ambient, beatless intro).
+            if ( !v2.restored ) {
+                v2.bpm = null;
+                v2.bpmConfidence = confidence;
+            }
+            return;
+        }
+
+        v2.bpm = bpm;
+        v2.bpmConfidence = confidence;
+        v2.tempoSeconds = v2.seconds;
+    }
+
+    // ---------- key ----------
+
+    function v2SnapshotDue( mediaTime ) {
+        const since = mediaTime - v2.lastSnapshotAt;
+
+        if ( since < 0 ) {
+            return true; // seek backwards
+        }
+
+        if ( since < 0.18 ) {
+            return false;
+        }
+
+        if ( v2.beatPeriod && Number.isFinite( v2.beatPhase ) ) {
+            const centre = mediaTime - v2Nodes.windowCentre;
+            let position = ( ( centre - v2.beatPhase ) / v2.beatPeriod ) % 1;
+            if ( position < 0 ) {
+                position += 1;
+            }
+            if ( position >= 0.38 && position <= 0.62 ) {
+                v2.gatedSnapshots++;
+                return true;
+            }
+            return since > 1.5;
+        }
+
+        return since >= 0.25;
+    }
+
+    function v2SampleHarmonic( mediaTime ) {
+        const nodes = v2Nodes;
+        nodes.harmonic.getFloatFrequencyData( nodes.spectrum );
+
+        const size = nodes.bandSize;
+        const start = nodes.startBin;
+        const amp = nodes.amp;
+        let total = 0;
+
+        for ( let i = 0; i < size; i++ ) {
+            const db = nodes.spectrum[ start + i ];
+            const value = Number.isFinite( db ) ? Math.pow( 10, db / 20 ) : 0;
+            amp[ i ] = value;
+            total += value;
+        }
+
+        v2.lastSnapshotAt = mediaTime;
+
+        if ( total < 1e-7 * size ) {
+            return; // silence
+        }
+
+        // Harmonic / percussive split.
+        if ( !v2.hpssRing || v2.hpssRing.length !== V2_HPSS_FRAMES * size ) {
+            v2.hpssRing = new Float64Array( V2_HPSS_FRAMES * size );
+            v2.hpssCount = 0;
+            v2.hpssIndex = 0;
+        }
+
+        v2.hpssRing.set( amp, v2.hpssIndex * size );
+        v2.hpssIndex = ( v2.hpssIndex + 1 ) % V2_HPSS_FRAMES;
+        v2.hpssCount = Math.min( V2_HPSS_FRAMES, v2.hpssCount + 1 );
+        v2.snapshots++;
+
+        const frames = v2.hpssCount;
+        const ring = v2.hpssRing;
+        const percussive = nodes.percussive;
+        const scratch = nodes.scratch;
+        const half = V2_FREQ_MEDIAN_HALF;
+
+        for ( let i = 0; i < size; i++ ) {
+            const lo = Math.max( 0, i - half );
+            const hi = Math.min( size - 1, i + half );
+            const count = hi - lo + 1;
+            for ( let j = 0; j < count; j++ ) {
+                scratch[ j ] = amp[ lo + j ];
+            }
+            percussive[ i ] = v2Quickselect( scratch, count, count >> 1 );
+        }
+
+        const timeValues = new Float64Array( V2_HPSS_FRAMES );
+        const binHz = nodes.binHz;
+        const frameChroma = new Float64Array( 12 );
+        const frameHigh = new Float64Array( 12 );
+        const tuning = v2.tuneW > 0 ? Math.atan2( v2.tuneIm, v2.tuneRe ) / ( 2 * Math.PI ) * 100 : 0;
+        let peakEnergy = 0;
+        let frameTuneRe = 0;
+        let frameTuneIm = 0;
+        let frameTuneW = 0;
+        let previousH = 0;
+        let currentH = 0;
+
+        const harmonicAt = i => {
+            for ( let f = 0; f < frames; f++ ) {
+                timeValues[ f ] = ring[ f * size + i ];
+            }
+            const timeMedian = v2Quickselect( timeValues, frames, frames >> 1 );
+            const p = percussive[ i ];
+            const mask = ( timeMedian * timeMedian ) / ( timeMedian * timeMedian + p * p + 1e-20 );
+            return amp[ i ] * mask;
+        };
+
+        currentH = harmonicAt( 0 );
+        let nextH = harmonicAt( 1 );
+
+        for ( let i = 1; i < size - 1; i++ ) {
+            previousH = currentH;
+            currentH = nextH;
+            nextH = harmonicAt( i + 1 );
+
+            if ( currentH <= previousH || currentH < nextH ) {
+                continue;
+            }
+
+            const salience = currentH / ( percussive[ i ] + 1e-12 );
+            if ( salience < 2 ) {
+                continue;
+            }
+
+            const a = Math.log( amp[ i - 1 ] + 1e-12 );
+            const b = Math.log( amp[ i ] + 1e-12 );
+            const c = Math.log( amp[ i + 1 ] + 1e-12 );
+            const curve = a - 2 * b + c;
+            const delta = curve < 0 ? Math.max( -0.5, Math.min( 0.5, 0.5 * ( a - c ) / curve ) ) : 0;
+            const hz = ( start + i + delta ) * binHz;
+
+            if ( hz < V2_LOW_HZ || hz > V2_HIGH_HZ ) {
+                continue;
+            }
+
+            const midiRaw = 69 + 12 * Math.log2( hz / 440 );
+            let weight = Math.sqrt( currentH ) * Math.min( 1, ( salience - 2 ) / 4 + 0.25 );
+            if ( hz < 100 ) {
+                weight *= 0.5;
+            }
+
+            peakEnergy += currentH;
+
+            if ( hz >= 100 && hz <= 2000 ) {
+                const deviation = midiRaw - Math.round( midiRaw );
+                frameTuneRe += weight * Math.cos( 2 * Math.PI * deviation );
+                frameTuneIm += weight * Math.sin( 2 * Math.PI * deviation );
+                frameTuneW += weight;
+            }
+
+            const midi = midiRaw - tuning / 100;
+            const nearest = Math.round( midi );
+            const distance = Math.abs( midi - nearest );
+            const shape = Math.cos( Math.PI * distance );
+            const pitchClass = ( ( nearest % 12 ) + 12 ) % 12;
+            frameChroma[ pitchClass ] += weight * shape * shape;
+            if ( hz >= 100 ) {
+                frameHigh[ pitchClass ] += weight * shape * shape;
+            }
+        }
+
+        v2.tuneRe += frameTuneRe;
+        v2.tuneIm += frameTuneIm;
+        v2.tuneW += frameTuneW;
+
+        let chromaTotal = 0;
+        for ( let i = 0; i < 12; i++ ) {
+            chromaTotal += frameChroma[ i ];
+        }
+
+        const tonal = clamp01( peakEnergy / total );
+        v2.tonalSum += tonal;
+        v2.tonalFrames++;
+
+        if ( chromaTotal <= 1e-12 ) {
+            return;
+        }
+
+        const frameWeight = Math.min( 1, tonal * 4 );
+        for ( let i = 0; i < 12; i++ ) {
+            v2.chroma[ i ] += frameChroma[ i ] / chromaTotal * frameWeight;
+            v2.chromaHigh[ i ] += frameHigh[ i ] / chromaTotal * frameWeight;
+        }
+        v2.chromaWeight += frameWeight;
+    }
+
+    function v2EstimateKey() {
+        const seconds = v2.seconds + v2.priorSeconds;
+
+        if ( v2.chromaWeight <= 0 ) {
+            if ( seconds >= V2_NO_KEY_SECONDS && v2.tonalFrames > 20 ) {
+                v2.noKey = true;
+                v2.keyState = 'none';
+                v2.keyIndex = null;
+                v2.keyScale = null;
+            }
+            return;
+        }
+
+        const chroma = Array.from( v2.chroma, value => value / v2.chromaWeight );
+
+        const candidates = [];
+        for ( let tonic = 0; tonic < 12; tonic++ ) {
+            candidates.push( { index: tonic, scale: 'major', r: v2Pearson( chroma, V2_EDMA_MAJOR, tonic ) } );
+            candidates.push( { index: tonic, scale: 'minor', r: v2Pearson( chroma, V2_EDMA_MINOR, tonic ) + V2_MINOR_BIAS } );
+        }
+        candidates.sort( ( a, b ) => b.r - a.r );
+
+        const best = candidates[ 0 ];
+        const runnerUp = candidates[ 1 ];
+        const margin = best.r - runnerUp.r;
+
+        // Chroma flatness: 0 = one pitch class, 1 = perfectly flat.
+        let entropy = 0;
+        for ( const value of chroma ) {
+            if ( value > 0 ) {
+                entropy -= value * Math.log( value );
+            }
+        }
+        const flatness = entropy / Math.log( 12 );
+        const tonalMean = v2.tonalFrames ? v2.tonalSum / v2.tonalFrames : 0;
+
+        // Is there real harmonic material above the kick/sub range?
+        // A tuned kick alone must not produce a key.
+        let highTotal = 0;
+        for ( const value of v2.chromaHigh ) {
+            highTotal += value;
+        }
+        const highShare = highTotal / v2.chromaWeight;
+        let highFlatness = 1;
+        let highR = 0;
+        if ( highTotal > 0 ) {
+            const high = Array.from( v2.chromaHigh, value => value / highTotal );
+            let highEntropy = 0;
+            for ( const value of high ) {
+                if ( value > 0 ) {
+                    highEntropy -= value * Math.log( value );
+                }
+            }
+            highFlatness = highEntropy / Math.log( 12 );
+            for ( let tonic = 0; tonic < 12; tonic++ ) {
+                highR = Math.max( highR, v2Pearson( high, V2_EDMA_MAJOR, tonic ), v2Pearson( high, V2_EDMA_MINOR, tonic ) );
+            }
+        }
+        v2.highShare = highShare;
+        v2.highFlatness = highFlatness;
+        v2.highR = highR;
+
+        const confidence = clamp01(
+            ( best.r - 0.5 ) * 1.2 +
+            margin * 5 +
+            clamp01( ( 0.97 - flatness ) * 6 ) * 0.15 +
+            Math.min( 0.1, seconds / 600 )
+        );
+
+        v2.keyR = best.r;
+        v2.keyRunnerUp = runnerUp;
+        v2.keyRunnerUpR = runnerUp.r;
+        v2.keyFlatness = flatness;
+        v2.tonalMean = tonalMean;
+
+        const weak =
+            best.r < 0.5 ||
+            tonalMean < 0.03 ||
+            highShare < 0.35 ||
+            highFlatness > 0.94 ||
+            highR < 0.55;
+
+        if ( seconds >= V2_NO_KEY_SECONDS && weak ) {
+            v2.noKey = true;
+            v2.keyState = 'none';
+            v2.keyIndex = null;
+            v2.keyScale = null;
+            v2.keyConfidence = confidence;
+            return;
+        }
+
+        v2.noKey = false;
+
+        // Never show an early guess on material that currently looks
+        // atonal: keep LEARNING until real harmonic evidence arrives.
+        if ( seconds < V2_KEY_PROVISIONAL_SECONDS || best.r < 0.4 || weak ) {
+            if ( weak && !v2.final ) {
+                v2.keyIndex = null;
+                v2.keyScale = null;
+                v2.keyState = 'learning';
+            }
+            return;
+        }
+
+        v2.keyIndex = best.index;
+        v2.keyScale = best.scale;
+        v2.keyConfidence = confidence;
+
+        if ( v2.final ) {
+            v2.keyState = 'final';
+        } else if ( seconds >= V2_KEY_FIRM_SECONDS && confidence >= 0.55 ) {
+            v2.keyState = 'firm';
+        } else {
+            v2.keyState = 'provisional';
+        }
+    }
+
+    function v2TuningCents() {
+        if ( v2.tuneW <= 0 ) {
+            return null;
+        }
+        return Math.atan2( v2.tuneIm, v2.tuneRe ) / ( 2 * Math.PI ) * 100;
+    }
+
+    // ---------- publish / remember / log ----------
+
+    function v2Publish() {
+        // Until v2 has its own answer, keep whatever was restored from
+        // memory on screen (including results saved by the classic engine).
+        if ( Number.isFinite( v2.bpm ) ) {
+            trackAnalysisBpm = v2.bpm;
+            trackAnalysisBpmConfidence = v2.bpmConfidence || 0;
+        } else if ( !trackAnalysisFromMemory ) {
+            trackAnalysisBpm = null;
+            trackAnalysisBpmConfidence = v2.bpmConfidence || 0;
+        }
+
+        if ( Number.isInteger( v2.keyIndex ) ) {
+            trackAnalysisKeyIndex = v2.keyIndex;
+            trackAnalysisScale = v2.keyScale;
+            trackAnalysisKeyConfidence = v2.keyConfidence || 0;
+        } else if ( v2.noKey || !trackAnalysisFromMemory ) {
+            trackAnalysisKeyIndex = null;
+            trackAnalysisScale = null;
+            trackAnalysisKeyConfidence = v2.keyConfidence || 0;
+        }
+    }
+
+    function v2Coverage() {
+        const total = v2.seconds + v2.priorSeconds;
+        return v2.duration > 0 ? Math.min( 1, total / v2.duration ) : 0;
+    }
+
+    function v2CheckFinal() {
+        if ( v2.final ) {
+            return;
+        }
+        const total = v2.seconds + v2.priorSeconds;
+        if ( ( v2.duration > 0 && v2Coverage() >= V2_FINAL_COVERAGE ) || total >= V2_FINAL_SECONDS ) {
+            v2.final = true;
+            if ( Number.isInteger( v2.keyIndex ) ) {
+                v2.keyState = 'final';
+            }
+        }
+    }
+
+    function v2Remember() {
+        const id = v2?.trackId;
+        if ( !id ) {
+            return;
+        }
+
+        const hasBpm = Number.isFinite( v2.bpm );
+        const hasKey = Number.isInteger( v2.keyIndex );
+        const total = v2.seconds + v2.priorSeconds;
+
+        if ( !hasBpm && !hasKey && !v2.noKey && v2.chromaWeight <= 0 ) {
+            return;
+        }
+
+        if ( v2.restoredFinal && v2.seconds < 5 ) {
+            return; // nothing new to add
+        }
+
+        const entry = { t: Date.now(), e: 2, d: Math.round( total ) };
+
+        if ( hasBpm ) {
+            entry.b = Math.round( v2.bpm * 10 ) / 10;
+            entry.bc = Math.round( v2.bpmConfidence * 100 ) / 100;
+            entry.bd = Math.round( v2.tempoSeconds );
+        }
+
+        if ( hasKey ) {
+            entry.k = v2.keyIndex;
+            entry.kc = Math.round( v2.keyConfidence * 100 ) / 100;
+            entry.s = v2.keyScale;
+            entry.sc = entry.kc;
+        }
+
+        if ( v2.noKey ) {
+            entry.nk = 1;
+        }
+
+        if ( v2.chromaWeight > 0 ) {
+            let max = 0;
+            for ( const value of v2.chroma ) {
+                max = Math.max( max, value );
+            }
+            entry.c = Array.from( v2.chroma, value => max > 0 ? Math.round( value / max * 999 ) : 0 );
+            entry.ch = Array.from( v2.chromaHigh, value => max > 0 ? Math.round( value / max * 999 ) : 0 );
+            entry.cw = Math.round( v2.chromaWeight * 10 ) / 10;
+        }
+
+        const tuning = v2TuningCents();
+        if ( tuning !== null ) {
+            entry.tu = Math.round( tuning * 10 ) / 10;
+            entry.tw = Math.round( v2.tuneW * 100 ) / 100;
+        }
+
+        if ( v2.tonalFrames ) {
+            entry.ts = Math.round( v2.tonalSum * 100 ) / 100;
+            entry.tf = v2.tonalFrames;
+        }
+
+        if ( v2.final ) {
+            entry.f = 1;
+        }
+
+        trackAnalysisMemory[ id ] = entry;
+        trackAnalysisMemoryDirty = true;
+
+        if ( !trackAnalysisMemoryTimer ) {
+            trackAnalysisMemoryTimer = setTimeout( flushTrackAnalysisMemory, 4000 );
+        }
+    }
+
+    function v2LogEntry() {
+        const id = v2.trackId;
+        let title = '';
+        try {
+            title = findVideoById( id )?.title || document.title.replace( /\s*-\s*YouTube\s*$/i, '' );
+        } catch {}
+
+        const tuning = v2TuningCents();
+
+        return {
+            t: Date.now(),
+            id,
+            title: String( title || '' ).slice( 0, 90 ),
+            eng: 'new',
+            sec: Math.round( v2.seconds ),
+            prior: Math.round( v2.priorSeconds ),
+            dur: Math.round( v2.duration || 0 ),
+            bpm: Number.isFinite( v2.bpm ) ? Math.round( v2.bpm * 10 ) / 10 : null,
+            raw: Number.isFinite( v2.bpmRaw ) ? Math.round( v2.bpmRaw * 100 ) / 100 : null,
+            bc: Math.round( ( v2.bpmConfidence || 0 ) * 100 ),
+            half: v2.bpmHalfRatio,
+            dbl: v2.bpmDoubleRatio,
+            key: v2.noKey ? 'none' : v2KeyLabel( v2.keyIndex, v2.keyScale ),
+            kc: Math.round( ( v2.keyConfidence || 0 ) * 100 ),
+            r: Math.round( ( v2.keyR || 0 ) * 100 ) / 100,
+            alt: v2.keyRunnerUp ? `${v2KeyLabel( v2.keyRunnerUp.index, v2.keyRunnerUp.scale )} ${Math.round( v2.keyRunnerUpR * 100 ) / 100}` : '',
+            tune: tuning === null ? null : Math.round( tuning ),
+            flat: Number.isFinite( v2.keyFlatness ) ? Math.round( v2.keyFlatness * 100 ) / 100 : null,
+            tonal: Number.isFinite( v2.tonalMean ) ? Math.round( v2.tonalMean * 100 ) / 100 : null,
+            snaps: v2.snapshots,
+            gated: v2.gatedSnapshots,
+            state: v2.final ? 'final' : v2.keyState,
+            mem: v2.restored ? ( v2.restoredFinal ? 'final' : 'partial' ) : 'no'
+        };
+    }
+
+    function v2WriteLog() {
+        if ( !v2?.trackId || v2.restoredFinal || v2.seconds < 5 ) {
+            return;
+        }
+        try {
+            const log = GM_getValue( ANALYSIS_LOG_KEY, [] );
+            const list = Array.isArray( log ) ? log.filter( item => item && item.id !== v2.trackId ) : [];
+            list.push( v2LogEntry() );
+            GM_setValue( ANALYSIS_LOG_KEY, list.slice( -ANALYSIS_LOG_LIMIT ) );
+        } catch {}
+    }
+
+    function v2FlushOnLeave() {
+        if ( !v2 ) {
+            return;
+        }
+        v2CheckFinal();
+        if ( v2.seconds > 0 ) {
+            v2EstimateKey();
+            v2Publish();
+        }
+        v2Remember();
+        v2WriteLog();
+    }
+
+    function formatAnalysisLogLine( item ) {
+        const when = new Date( item.t || 0 ).toISOString().slice( 5, 16 ).replace( 'T', ' ' );
+        const octave = [ item.half !== null && item.half !== undefined ? `½×${item.half}` : '', item.dbl !== null && item.dbl !== undefined ? `2×${item.dbl}` : '' ].filter( Boolean ).join( ' ' );
+        return [
+            `${when} · ${item.id} · ${item.title || '?'}`,
+            `  BPM ${item.bpm ?? '—'} (raw ${item.raw ?? '—'}, ${item.bc}%${octave ? `, ${octave}` : ''})` +
+            ` · KEY ${item.key} (${item.kc}%, r ${item.r}, next ${item.alt || '—'})` +
+            ` · tune ${item.tune ?? '—'}c · flat ${item.flat ?? '—'} · tonal ${item.tonal ?? '—'}` +
+            ` · ${item.sec}s+${item.prior}s/${item.dur}s · snaps ${item.snaps} (${item.gated} between kicks) · ${item.state} · mem ${item.mem}`
+        ].join( '\n' );
+    }
+
+    function buildAnalysisDiagnosticsLines() {
+        const lines = [ 'Analysis engine: v2' ];
+
+        if ( v2?.trackId ) {
+            if ( v2.restoredFinal ) {
+                lines.push( `Current track: ${v2.trackId} · remembered full-track result · BPM ${Number.isFinite( v2.bpm ) ? v2.bpm : '—'} · KEY ${v2.noKey ? 'none' : v2KeyLabel( v2.keyIndex, v2.keyScale )} (see log below for the original analysis)` );
+            } else {
+                lines.push( 'Current track (live):', formatAnalysisLogLine( v2LogEntry() ) );
+            }
+        }
+
+        let log = [];
+        try {
+            log = GM_getValue( ANALYSIS_LOG_KEY, [] );
+        } catch {}
+
+        if ( Array.isArray( log ) && log.length ) {
+            lines.push( `Analysis log (last ${log.length} track(s)):` );
+            for ( const item of log ) {
+                lines.push( formatAnalysisLogLine( item ) );
+            }
+        } else {
+            lines.push( 'Analysis log: empty' );
+        }
+
+        return lines;
+    }
+
+    // ---------- per-tick driver ----------
+
+    function v2Tick() {
+        const id = currentVideoId();
+
+        if ( id !== trackAnalysisTrackId ) {
+            resetTrackAnalysis( id );
+        }
+
+        if ( !v2 || v2.trackId !== id ) {
+            v2Reset( id );
+        }
+
+        const video = currentMainVideo();
+
+        if ( !video || video.paused ) {
+            v2.lastMediaTime = null;
+            return;
+        }
+
+        if ( !trackAnalysisTempoAnalyser || !visualizerSource ) {
+            attachVisualizerAudio();
+            if ( expanded && !utilityPanelOpen ) {
+                updateTrackAnalysisUI();
+            }
+            return;
+        }
+
+        if ( v2.restoredFinal ) {
+            // Full-track result already saved: show it, no re-analysis.
+            if ( !v2.publishedRestored ) {
+                v2.publishedRestored = true;
+                v2Publish();
+            }
+            const nowLocked = performance.now();
+            if ( expanded && !utilityPanelOpen && nowLocked - v2.lastUiAt >= V2_UI_MS ) {
+                v2.lastUiAt = nowLocked;
+                updateTrackAnalysisUI();
+            }
+            return;
+        }
+
+        if ( !v2EnsureNodes() ) {
+            return;
+        }
+
+        const mediaTime = video.currentTime;
+        if ( !Number.isFinite( mediaTime ) ) {
+            return;
+        }
+
+        v2.duration = Number.isFinite( video.duration ) ? video.duration : v2.duration;
+
+        if ( v2.lastMediaTime !== null ) {
+            const delta = mediaTime - v2.lastMediaTime;
+            if ( delta > 0 && delta < 1 ) {
+                v2.seconds += delta;
+            }
+        }
+        v2.lastMediaTime = mediaTime;
+
+        v2SampleKick( mediaTime );
+
+        if ( v2SnapshotDue( mediaTime ) ) {
+            v2SampleHarmonic( mediaTime );
+        }
+
+        const now = performance.now();
+        let changed = false;
+
+        if ( now - v2.lastTempoEstimateAt >= V2_TEMPO_ESTIMATE_MS ) {
+            v2.lastTempoEstimateAt = now;
+            v2EstimateTempo( mediaTime );
+            changed = true;
+        }
+
+        if ( now - v2.lastKeyEstimateAt >= V2_KEY_ESTIMATE_MS ) {
+            v2.lastKeyEstimateAt = now;
+            v2CheckFinal();
+            v2EstimateKey();
+            changed = true;
+        }
+
+        if ( changed ) {
+            v2Publish();
+        }
+
+        if ( now - v2.lastRememberAt >= V2_REMEMBER_MS && v2.seconds >= 10 ) {
+            v2.lastRememberAt = now;
+            v2Remember();
+            if ( v2.final || v2.seconds >= 30 ) {
+                v2WriteLog();
+            }
+        }
+
+        if ( expanded && !utilityPanelOpen && now - v2.lastUiAt >= V2_UI_MS ) {
+            v2.lastUiAt = now;
+            updateTrackAnalysisUI();
+        }
+    }
+
+    function v2RenderAnalysisUI( panel ) {
+        const bpmValue = document.getElementById( 'strata-analysis-bpm' );
+        const keyValue = document.getElementById( 'strata-analysis-key' );
+        const scaleValue = document.getElementById( 'strata-analysis-scale' );
+        const camelotValue = document.getElementById( 'strata-analysis-camelot' );
+        const tempoConfidence = document.getElementById( 'strata-analysis-tempo-confidence' );
+        const keyConfidence = document.getElementById( 'strata-analysis-key-confidence' );
+        const state = document.getElementById( 'strata-analysis-state' );
+        const hasAudio = Boolean( trackAnalysisTempoAnalyser && visualizerMode === 'AUDIO' );
+        const live = v2 || v2NewState( null );
+        const total = live.seconds + live.priorSeconds;
+        const hasKey = Number.isInteger( trackAnalysisKeyIndex );
+
+        if ( bpmValue ) {
+            bpmValue.textContent = formatBpmDisplay( trackAnalysisBpm, trackAnalysisBpmConfidence );
+        }
+
+        if ( keyValue ) {
+            keyValue.textContent = hasKey ? TRACK_ANALYSIS_NOTE_NAMES[ trackAnalysisKeyIndex ] : '—';
+            keyValue.title = live.noKey ? 'No clear key — the track is mostly atonal or percussive' : '';
+        }
+
+        if ( scaleValue ) {
+            if ( hasKey ) {
+                // Older saved results can carry a modal scale (e.g. Dorian).
+                const definition = trackAnalysisScaleDefinition( trackAnalysisScale );
+                scaleValue.textContent = definition?.short || '—';
+                scaleValue.title = definition?.name || '';
+            } else {
+                scaleValue.textContent = live.noKey ? 'NO KEY' : '—';
+                scaleValue.title = live.noKey ? 'No clear key' : '';
+            }
+        }
+
+        if ( camelotValue ) {
+            const camelot = hasKey ? camelotCodeFor( trackAnalysisKeyIndex, trackAnalysisScale ) : null;
+            camelotValue.textContent = camelot || '—';
+            camelotValue.title = camelot ? 'Camelot code' : '';
+        }
+
+        if ( tempoConfidence ) {
+            tempoConfidence.textContent = Number.isFinite( trackAnalysisBpm ) ? `TEMPO ${formatTrackAnalysisConfidence( trackAnalysisBpmConfidence )}` : 'TEMPO LEARNING';
+        }
+
+        if ( keyConfidence ) {
+            if ( live.noKey ) {
+                keyConfidence.textContent = 'NO CLEAR KEY';
+            } else if ( !hasKey ) {
+                keyConfidence.textContent = 'KEY LEARNING';
+            } else if ( live.keyState === 'provisional' ) {
+                keyConfidence.textContent = `KEY ${formatTrackAnalysisConfidence( trackAnalysisKeyConfidence )} · EARLY`;
+            } else if ( live.final ) {
+                keyConfidence.textContent = `KEY ${formatTrackAnalysisConfidence( trackAnalysisKeyConfidence )} · FULL TRACK`;
+            } else {
+                keyConfidence.textContent = `KEY ${formatTrackAnalysisConfidence( trackAnalysisKeyConfidence )}`;
+            }
+        }
+
+        if ( state ) {
+            if ( live.restoredFinal ) {
+                state.textContent = 'REMEMBERED';
+                state.dataset.state = 'active';
+            } else if ( !hasAudio ) {
+                state.textContent = 'WAITING FOR AUDIO';
+                state.dataset.state = 'waiting';
+            } else if ( live.final ) {
+                state.textContent = 'FULL TRACK';
+                state.dataset.state = 'active';
+            } else {
+                state.textContent = `ANALYSING ${Math.floor( total )}s`;
+                state.dataset.state = 'active';
+            }
+        }
+
+        panel.dataset.ready = ( Number.isFinite( trackAnalysisBpm ) || hasKey ) ? 'true' : 'false';
+    }
+
+    /* STRATA_ANALYSIS_V2_END */
+
 
     // ============================================================
     // ABOUT / SUPPORT
@@ -12236,117 +11678,6 @@
         );
     }
 
-    function rememberTrackAnalysis() {
-        const id =
-            trackAnalysisTrackId;
-
-        if (
-            !id ||
-            id !==
-                currentVideoId()
-        ) {
-            return;
-        }
-
-        const hasBpm =
-            Number.isFinite(
-                trackAnalysisBpm
-            );
-
-        const hasKey =
-            Number.isInteger(
-                trackAnalysisKeyIndex
-            );
-
-        if (
-            !hasBpm &&
-            !hasKey
-        ) {
-            return;
-        }
-
-        const entry = {
-            t:
-                Date.now()
-        };
-
-        if (hasBpm) {
-            entry.b =
-                Math.round(
-                    trackAnalysisBpm *
-                        10
-                ) /
-                10;
-
-            entry.bc =
-                Math.round(
-                    trackAnalysisBpmConfidence *
-                        100
-                ) /
-                100;
-        }
-
-        if (hasKey) {
-            entry.k =
-                trackAnalysisKeyIndex;
-
-            entry.kc =
-                Math.round(
-                    trackAnalysisKeyConfidence *
-                        100
-                ) /
-                100;
-        }
-
-        if (
-            trackAnalysisScale
-        ) {
-            entry.s =
-                trackAnalysisScale;
-
-            entry.sc =
-                Math.round(
-                    trackAnalysisScaleConfidence *
-                        100
-                ) /
-                100;
-        }
-
-        const previous =
-            trackAnalysisMemory[
-                id
-            ];
-
-        if (
-            previous &&
-            previous.b ===
-                entry.b &&
-            previous.k ===
-                entry.k &&
-            previous.s ===
-                entry.s
-        ) {
-            return;
-        }
-
-        trackAnalysisMemory[
-            id
-        ] =
-            entry;
-
-        trackAnalysisMemoryDirty =
-            true;
-
-        if (
-            !trackAnalysisMemoryTimer
-        ) {
-            trackAnalysisMemoryTimer =
-                setTimeout(
-                    flushTrackAnalysisMemory,
-                    4000
-                );
-        }
-    }
 
     function restoreTrackAnalysisFromMemory(
         id
@@ -12404,11 +11735,6 @@
             trackAnalysisScale =
                 entry.s;
 
-            trackAnalysisScaleConfidence =
-                Number(
-                    entry.sc
-                ) ||
-                TRACK_ANALYSIS_SCALE_MIN_CONFIDENCE;
         }
 
         trackAnalysisFromMemory =
@@ -22365,9 +21691,33 @@
     function savePanelSize(
         size
     ) {
+        /*
+            v8.5.96: if the panel reaches the bottom of the window when it
+            is saved, remember that, so it keeps filling down to the bottom
+            on every page and window size instead of a fixed height.
+        */
+
+        const panel =
+            document.getElementById(
+                'strata-panel'
+            );
+
+        const rect =
+            panel?.getBoundingClientRect();
+
         GM_setValue(
             PANEL_SIZE_KEY,
-            size
+            {
+                ...size,
+                toBottom:
+                    Boolean(
+                        rect &&
+                        rect.height > 0 &&
+                        rect.bottom >=
+                            window.innerHeight -
+                            24
+                    )
+            }
         );
     }
 
@@ -22450,7 +21800,9 @@
         const size =
             clampPanelSize(
                 saved.width,
-                saved.height
+                saved.toBottom
+                    ? Number.MAX_SAFE_INTEGER
+                    : saved.height
             );
 
         panel.style.width =
@@ -23170,6 +22522,9 @@
     let panelDockFrame =
         0;
 
+    let panelDockLastApplied =
+        false;
+
     function watchPlayerForDocking() {
         if (
             typeof ResizeObserver !==
@@ -23368,6 +22723,11 @@
 
             const docked =
                 getDockedPanelGeometry();
+
+            panelDockLastApplied =
+                Boolean(
+                    docked
+                );
 
             if (panel) {
                 if (docked) {
@@ -26146,6 +25506,8 @@
             `Seed: last check ${formatStamp(GM_getValue(HOSTED_SEED_LAST_CHECK_KEY, 0))} · last failure ${formatStamp(GM_getValue(HOSTED_SEED_LAST_FAILURE_KEY, 0))} · version ${GM_getValue(HOSTED_SEED_LAST_VERSION_KEY, '') || 'none'}`,
             `Ad on screen now: ${isAdPlaying() ? 'yes' : 'no'}`,
             `Debug log: ${strataDebugLogging ? 'on' : 'off'}`,
+            '',
+            ...buildAnalysisDiagnosticsLines(),
             '',
             `Recent STRATA log (last ${Math.min(40, STRATA_LOG_BUFFER.length)} lines):`,
             ...STRATA_LOG_BUFFER.slice(
@@ -31980,6 +31342,32 @@
     function attachPlayer() {
         watchAdState();
 
+        /*
+            v8.5.96: STRATA loads a fresh page per track, and YouTube can
+            build its player after STRATA first positions the panel. If the
+            player wasn't there yet the docked panel fell back to its short
+            default size and stayed that way. Re-check here (every 1.5 s)
+            and re-dock as soon as the player exists.
+        */
+
+        if (
+            expanded &&
+            isPanelDocked()
+        ) {
+            const before =
+                panelDockObservedNode;
+
+            watchPlayerForDocking();
+
+            if (
+                panelDockObservedNode !==
+                    before ||
+                !panelDockLastApplied
+            ) {
+                applyPanelPosition();
+            }
+        }
+
         applyMediaSessionHandlers();
 
         const video =
@@ -32887,6 +32275,10 @@
                 persistPanelPosition();
 
                 flushPendingCacheWrite();
+
+                try {
+                    v2FlushOnLeave();
+                } catch {}
 
                 flushTrackAnalysisMemory();
 

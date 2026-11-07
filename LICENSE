@@ -1,0 +1,43 @@
+STRATA
+Copyright (c) 2026 Colman Buckley. All rights reserved.
+
+STRATA, including its source code, visual engine, track-analysis engine,
+skins, artwork, store assets and documentation (the "Software"), is the
+original work of Colman Buckley and is protected by copyright.
+
+PERMITTED
+You may install and use the Software free of charge, for your own
+listening, from its official sources:
+  - the Chrome Web Store, Microsoft Edge Add-ons and Firefox Add-ons
+    listings published by Colman Buckley
+  - the GitHub repository github.com/colman909/strata-seed
+
+NOT PERMITTED
+Without prior written permission from Colman Buckley, you may not:
+  - copy, reproduce or republish the Software, in whole or in part
+  - modify it, translate it, or create works based on it
+  - distribute, sell, rent, sublicense or otherwise make it available
+    to others, including as a browser extension, userscript, app,
+    website or part of another product
+  - remove or alter this notice or any copyright notice in the Software
+  - present the Software, or any part of it, as your own work
+
+Viewing the source code does not grant any of the rights above. Making
+the code readable is a technical requirement of browser extensions and
+userscripts, not a permission to reuse it.
+
+ENFORCEMENT
+Copies published without permission will be reported to the hosting
+platform (including GitHub, Google, Microsoft and Mozilla) for removal.
+
+THIRD-PARTY CONTENT
+Music, videos, artwork and channel content played or linked by STRATA
+belong to their respective owners and are not covered by this notice.
+
+DISCLAIMER
+The Software is provided "as is", without warranty of any kind. In no
+event shall the author be liable for any claim, damages or other
+liability arising from the use of the Software.
+
+For permission requests, open an issue at
+github.com/colman909/strata-seed/issues.

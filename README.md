@@ -1,187 +1,128 @@
 # STRATA
 
-**A curated electronic music radio for YouTube.**
+**Electronic music radio from curated channels, playing on YouTube.**
 
-STRATA turns YouTube into a continuous radio that plays from the full upload history of six hand-picked electronic music channels: some of the best of underground and authentic electronic music. There is no algorithm steering it. It doesn't favour views, likes or recommendations, so you discover music naturally, from the channels' earliest uploads to their latest.
+STRATA shuffles the full upload history of a hand-picked set of YouTube channels that champion underground and authentic electronic music. There's no algorithm: tracks aren't steered by views, likes or recommendations. You get genuine randomisation across each channel's whole catalogue, from the earliest uploads to the latest.
 
-As it plays, STRATA shows the release behind each track (including whether it's out on digital, vinyl or both), analyses tempo and key from the audio, and runs audio-reactive visuals alongside the music.
-
-> Desktop browsers only. Free to install and use.
-
----
-
-## Contents
-
-- [What STRATA does](#what-strata-does)
-- [Install](#install)
-- [Using STRATA](#using-strata)
-- [FAQ](#faq)
-- [Troubleshooting](#troubleshooting)
-- [Privacy](#privacy)
-- [Updating and uninstalling](#updating-and-uninstalling)
-- [Reporting a bug](#reporting-a-bug)
-- [Licence](#licence)
-
----
-
-## What STRATA does
-
-- **Continuous radio** from six curated channels: Acidalia, Analogue Network, Indefinite Pitch, MNMT, subsuelorecs and PARADIGMAS. Their entire upload history is in the mix, not just recent releases.
-- **Genuine shuffle** that spreads plays across the channels and avoids repeating tracks.
-- **Release info for DJs**: artist, label, release date, and whether the release is available on digital, vinyl or both (checked on Bandcamp), with links to Bandcamp and SoundCloud. If the vinyl isn't available, a one-click Discogs link helps you buy it second-hand or add it to your wantlist.
-- **Track analysis**: a live estimate of tempo (BPM), key and mode, worked out from the audio as it plays. When the key isn't certain yet, STRATA shows the key it's leaning towards with a **?**, and says **No clear key** only when the music genuinely doesn't have one. Results are remembered, so a track you've heard before shows its analysis straight away.
-- **Visual engine**: ten audio-reactive visual styles: Vector, Spectrum, Cascade, Orbit, Phase and Aether, plus Tank, Chladni, Faraday and Voice, which are inspired by sound made visible in water, sand and vibrating plates. Double-click the visuals to go fullscreen.
-- **Favourites**: save tracks with one click or the Enter key, then play your favourites back as a playlist.
-- **Label and artist radio**: click the label or artist name of the current track to play only their music.
-- **Radio options**: an era filter (Fresh, Everything or Deep cuts), and Harmonic mix, which favours tracks whose key and tempo suit what's playing.
-- **Skins**: Ink Black (the default) and two skins inspired by classic drum machines, among others.
+STRATA is a browser extension. It runs on youtube.com and plays tracks in YouTube's own player.
 
 ---
 
 ## Install
 
-### Browser extension (recommended)
-
-| Browser | Get STRATA |
+| Browser | Status |
 |---|---|
-| **Chrome / Brave** | [Chrome Web Store](https://chromewebstore.google.com/detail/maccclcgcgddanecmkcbclhlgnioldob) |
-| **Edge** | Coming soon to Microsoft Edge Add-ons (Edge can also install from the Chrome Web Store link above) |
-| **Firefox** | Coming soon to Firefox Add-ons |
+| **Chrome** | [Chrome Web Store](https://chromewebstore.google.com/detail/maccclcgcgddanecmkcbclhlgnioldob) |
+| **Firefox** | [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/strata/) (requires Firefox 140 or later) |
+| **Edge** | Coming later. In the meantime, the Chrome Web Store version installs in Edge. |
 
-Click **Add to Chrome** (or your browser's equivalent) and confirm. Then go to [youtube.com](https://www.youtube.com): the **STRATA** button appears at the top left, over the YouTube logo.
+After installing, open [youtube.com](https://www.youtube.com). The STRATA button appears in the top left. Press it to start the radio.
 
-On first run STRATA starts with a 150-track starter set so music can play straight away, and downloads the full catalogue in the background. A message at the bottom of the screen tells you when the full library is ready.
-
-### Userscript (alternative)
-
-If you'd rather use Tampermonkey, STRATA is also available as a userscript. Install [Tampermonkey](https://www.tampermonkey.net/), then on Chrome, Edge or Brave turn on **Allow User Scripts** in Tampermonkey's extension details (or **Developer mode** on older browsers). Then click:
-
-**[Install STRATA (userscript)](https://raw.githubusercontent.com/colman909/strata-seed/main/STRATA.user.js)**
-
-and click **Install** on the page Tampermonkey opens. Use the extension *or* the userscript, not both.
-
-**Moving from STRATA Beta?** Install STRATA and it imports your favourites, settings, history and track analysis from the Beta automatically. Then delete STRATA Beta from Tampermonkey.
+> **Firefox users:** please read [Firefox setup](#firefox-setup) below. One setting is needed for the radio to move from track to track.
 
 ---
 
-## Using STRATA
+## The channels
 
-**Open the player.** Click the STRATA button. The player opens beside the video and covers YouTube's recommendations for a cleaner, more immersive view. Click the × to fold it back into the button.
+STRATA draws from six curated channels:
 
-**Start the radio.** Press Next (▶|) to jump to a STRATA track. With **Radio** switched on, STRATA moves to a new track every time one ends.
+**Acidalia · Analogue Network · Indefinite Pitch · MNMT · subsuelorecs · PARADIGMAS**
 
-**Move things around.** Drag the STRATA button anywhere and it stays where you leave it. Drag the open player by its header to move it, or by its bottom-right corner to resize it. **Double-click that corner** to snap it back beside the video.
+The full catalogue (around 40,000 tracks) loads on first run and is kept up to date automatically.
 
-**Keyboard shortcuts** (while a STRATA track is playing):
+---
+
+## Features
+
+- **True shuffle** across every channel's full upload history, with anti-repetition so you don't hear the same tracks over and over.
+- **Release info for every track**: artist, release and label details from Bandcamp and SoundCloud.
+- **For DJs: Digital / Vinyl**. Each track shows whether the release is available digitally, on vinyl, or both (checked on Bandcamp). When the vinyl isn't available, there's a Discogs link to buy it or add it to your wantlist.
+- **Live track analysis**: BPM and key, worked out in your browser as the track plays.
+- **Favourites**: save tracks with the heart button or the Enter key.
+- **Artist and label radio**: stay with one artist or label for a while.
+- **Era filter**: limit the radio to a period of releases.
+- **Harmonic mix**: when on, the radio prefers tracks in a compatible key and tempo.
+- **Audio-reactive visuals**: Vector, Spectrum, Cascade, Orbit, Phase, Aether, Tank, Chladni, Faraday and Voice. Several are modelled on real sound phenomena: Chladni plates, Faraday waves, ripple tanks and voice figures.
+- **Skins**: Ink Black (default) plus two looks inspired by classic drum machines.
+
+### Keyboard shortcuts
+
+These work on a video page. They're ignored while you're typing in search, comments or any text box.
 
 | Key | Action |
 |---|---|
-| `+` | Next track |
-| `−` | Previous track |
-| `Enter` | Add / remove favourite |
+| `Enter` | Favourite the current track |
+| `-` | Previous track |
+| `+` or `=` | Next track (no Shift needed; numpad works too) |
 
-The next and previous media keys on your keyboard or headphones work too.
+---
 
-**The tabs along the bottom of the player:**
+## Firefox setup
 
-- **Library**: your favourites, and playing them as a playlist.
-- **Stats**: the catalogue and your listening session at a glance.
-- **Settings**: radio options (era filter, Harmonic mix), channels, skin, and which visual styles are active.
-- **About**: contact, support, and the diagnostics tools.
+**Allow autoplay for YouTube.** Firefox blocks videos with sound from starting on their own. STRATA opens each new track as a new page, so without this setting the radio stops after the first track. STRATA shows a notice when this happens. To fix it for good:
+
+1. On youtube.com, click the icon at the left of the address bar.
+2. Find **Autoplay** and choose **Allow Audio and Video**.
+3. Reload the page.
+
+**Make sure STRATA can access YouTube.** If STRATA is enabled but the button doesn't appear when you open YouTube:
+
+1. Go to `about:addons` and click **STRATA**.
+2. Open the **Permissions** tab.
+3. Make sure access to **www.youtube.com** is switched on, then reload YouTube.
 
 ---
 
 ## FAQ
 
-**Is STRATA free?**
-Yes. There's an optional "Support STRATA via PayPal" button in the About tab if you'd like to chip in.
+**The radio stopped after one track (Firefox).**
+Autoplay is being blocked. See [Firefox setup](#firefox-setup). Click the STRATA notice to resume straight away, and allow autoplay so it doesn't happen again.
 
-**Do I need a YouTube account or YouTube Premium?**
-No. STRATA works signed in or out, with or without Premium.
+**STRATA is enabled but I can't see it.**
+On Firefox, check STRATA's YouTube permission (see [Firefox setup](#firefox-setup)). On any browser, try reloading the YouTube tab. If it still doesn't appear, please [open an issue](https://github.com/colman909/strata-seed/issues) and say which browser and version you're using.
 
-**Does STRATA block ads?**
-No. STRATA doesn't touch YouTube's ads. If an ad plays, STRATA waits for it to finish rather than skipping the track behind it. How many ads you see is down to the channels and YouTube, not STRATA.
+**I'm seeing a notice asking me to verify Bandcamp, or "Formats not checked".**
+Bandcamp sometimes shows a "Client Challenge" check to make sure you're a person. While that check is pending, STRATA can't read release formats, so the Digital / Vinyl labels can't be shown. Click the STRATA notice to open Bandcamp, complete the check, and the formats come back. Bandcamp links stay available either way.
 
-**Does STRATA download music?**
-No. Everything plays through YouTube's normal player, exactly as if you'd clicked the videos yourself.
+**Why does the key sometimes show a "?" or say "No clear key"?**
+Key detection runs live on the audio, and some tracks don't have one clear key. Think heavily percussive, atonal or constantly shifting music. When STRATA has a likely answer but isn't certain, it shows the key it's *leaning* towards with a "?". When the music doesn't settle on any key, it says so rather than guessing.
 
-**Will it work on my phone?**
-Not at the moment. STRATA needs a desktop browser.
+**Will I lose my favourites when STRATA updates?**
+No. Favourites, settings and history are kept across updates.
 
-**Can I add my own channels?**
-Not yet. The catalogue is curated and built ahead of time, which keeps STRATA fast and avoids putting extra load on YouTube. You can turn individual channels on or off under **Channels** in Settings.
+**I used the old STRATA Beta (Tampermonkey script). Can I bring my favourites?**
+Yes. Install the extension while the final Beta is still installed and open YouTube. STRATA picks up your favourites, settings and history automatically. After that you can remove the Beta script. STRATA no longer ships as a Tampermonkey script.
 
-**How often is the catalogue updated?**
-New uploads from the channels are added to the hosted catalogue regularly. STRATA checks for an updated catalogue about once an hour, and only downloads it when something has actually changed.
+**Does STRATA count as a view or like for the channels?**
+Tracks play on YouTube itself, in YouTube's own player. Saving a track to STRATA favourites doesn't like it on YouTube. If you enjoy a track, liking it or subscribing on YouTube is the best way to support the channel.
 
-**How accurate are the BPM and key readings?**
-They're estimates worked out live from the audio, so give them a little time. They settle as the track plays. Tracks with long ambient intros or unusual structures can take longer to lock on.
+**Does STRATA collect my data?**
+No. STRATA doesn't collect, sell or share any personal data. Your favourites and settings stay in your browser. See the [privacy policy](https://github.com/colman909/strata-seed/blob/main/PRIVACY.md).
 
-**Will I lose my favourites if I reinstall?**
-Normally no. STRATA keeps a backup copy of your favourites in your browser, so a fresh install restores them automatically. They are lost if you clear youtube.com's site data as well as uninstalling, or if you switch to a different browser or browser profile.
+**Why only these channels? Can you add one?**
+The channels are hand-picked as the best of the best for underground electronic music. Suggestions are welcome via [issues](https://github.com/colman909/strata-seed/issues).
 
-**Can I use STRATA in more than one browser?**
-Yes. Install it in each one. Settings and favourites are kept separately per browser.
-
----
-
-## Troubleshooting
-
-**The STRATA button doesn't appear on YouTube.**
-Check STRATA is switched on in your browser's extensions page, then reload the YouTube tab. Userscript users: check Tampermonkey is enabled, **STRATA** is switched on in its dashboard, and **Allow User Scripts** (or Developer mode) is on.
-
-**Firefox: the radio stops after each track.**
-Firefox blocks autoplay with sound by default, and STRATA shows a notice when this happens. Click the notice to carry on, or allow autoplay permanently: click the icon at the left of the address bar on YouTube, find **Autoplay**, and choose **Allow Audio and Video**.
-
-**Digital / Vinyl information is missing, or STRATA asks you to verify Bandcamp.**
-Bandcamp sometimes asks browsers to pass a quick verification check, and until you do, STRATA can't read release pages. Click STRATA's notice (or open any Bandcamp link) and complete the check on Bandcamp. STRATA picks it up from there.
-
-**There's no sound, or the visuals and track analysis don't move.**
-Browsers don't let audio start until you've interacted with the page. Click anywhere on the YouTube page or the player once. If the visuals still don't react, click the visual area itself.
-
-**I see "Radio paused — several tracks ended back-to-back".**
-STRATA stops itself if several tracks end within a minute, which usually means a run of unavailable videos. This protects against rapid-fire page reloads. Press **Next** to carry on.
-
-**I see "Full library unavailable right now — playing the starter set".**
-STRATA couldn't download the full catalogue, usually because of a network hiccup. Music still plays from the starter set, and STRATA tries again in a few minutes.
-
-**I have two copies of STRATA running.**
-Only one STRATA runs at a time. Keep either the extension or the userscript, and remove the other, along with any old STRATA Beta.
+**Does it work on mobile or in the YouTube app?**
+No. STRATA is a desktop browser extension for youtube.com.
 
 ---
 
-## Privacy
+## Known issues
 
-STRATA does not collect, sell or share any personal data. There are no accounts, no analytics, no tracking and no advertising. Your favourites, settings, history and track analysis stay in your own browser, and STRATA only contacts GitHub (for the catalogue), Bandcamp and SoundCloud (for release information) and YouTube itself.
-
-The full details are in the **[Privacy Policy](PRIVACY.md)**.
+- In a narrow browser window, the docked panel can overlap the right edge of the video instead of sitting beside it. Widening the window fixes it for now.
 
 ---
 
-## Updating and uninstalling
+## Support STRATA
 
-**Updates are automatic.** Your browser's extension store updates STRATA for you. Userscript users get updates through Tampermonkey, which checks roughly once a day (or choose **Check for userscript updates** in its dashboard).
+STRATA is free. If you'd like to support its development: [PayPal](https://paypal.me/COLMANBUCKLEY)
 
-**To uninstall,** remove STRATA from your browser's extensions page (or delete it in the Tampermonkey dashboard). To also remove the favourites backup, clear youtube.com's site data in your browser settings.
-
----
-
-## Reporting a bug
-
-1. Open STRATA and go to the **About** tab.
-2. Click **COPY DIAGNOSTICS**.
-3. Open an [issue on this repository](https://github.com/colman909/strata-seed/issues) and paste it in, with a short description of what went wrong.
-
-For extra detail, switch **DEBUG LOG** on in the About tab, reproduce the problem, then copy diagnostics again.
+Bug reports and suggestions: [GitHub issues](https://github.com/colman909/strata-seed/issues)
 
 ---
 
-## Licence
+## About this repository
 
-Copyright © 2026 Colman Buckley. All rights reserved.
+This repository hosts STRATA's public files: the track catalogue (`master.json`), the [privacy policy](PRIVACY.md) and this README. STRATA's source code is not published here.
 
-STRATA is free to install and use from the official sources listed above. Its code, visuals, artwork and documentation may not be copied, modified, redistributed, sold or presented as anyone else's work without written permission. See **[LICENSE](LICENSE)** for the full terms.
-
----
-
-*STRATA is an independent project and is not affiliated with YouTube, Google, Bandcamp, SoundCloud, Discogs or any of the featured channels. All music remains the property of its respective artists and labels.*
+© Colman Buckley. All rights reserved. See [LICENSE](LICENSE).

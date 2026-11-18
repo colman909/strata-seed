@@ -1,6 +1,6 @@
 # STRATA — Privacy Policy
 
-_Last updated: 2 November 2026_
+_Last updated: 18 November 2026_
 
 STRATA is a browser extension (also available as a userscript) that turns YouTube into a curated electronic music radio. This policy explains exactly what it does with data. The short version: **STRATA does not collect, sell or share any personal data. Everything it knows about you stays in your own browser.**
 
@@ -28,7 +28,7 @@ STRATA's tempo, key and visualiser features analyse the sound of the video you a
 STRATA only ever contacts these sites, and only to fetch public information:
 
 - **raw.githubusercontent.com** — to download the public STRATA music catalogue (a list of YouTube tracks) from the project's GitHub repository.
-- **bandcamp.com** — to look up the public release page for the track that is playing (release date, label, digital and vinyl formats). Bandcamp now asks browsers to pass a verification check before it shows release pages, so these requests carry your browser's existing Bandcamp cookies, exactly as visiting bandcamp.com yourself would. STRATA does not read, store or pass on those cookies.
+- **bandcamp.com** — to look up the public release page for the track that is playing (release date, label, digital and vinyl formats). Bandcamp now asks browsers to pass a verification check before it shows release pages, so these requests carry your browser's existing Bandcamp cookies, exactly as visiting bandcamp.com yourself would. STRATA does not read, store or pass on those cookies. On Chrome and Edge, when Bandcamp shows that check, STRATA loads the release's public page in a hidden page inside the extension so the check can finish, then reads the release details from it. Nothing about you is sent or stored.
 - **soundcloud.com** — to look up the public release page for the track that is playing.
 - **youtube.com** — STRATA runs on YouTube pages and reads the current video's public details (such as its description) to find release links. It plays videos through YouTube's own player.
 
